@@ -1,0 +1,538 @@
+Page 2-
+So a website is not a single giant file, it is a collection of 
+separate files assembles together by the browser 
+
+Web objects-Any single file that lives on a server- such as .html text file or a.jpf file 
+
+The base HTML file is likke a blueprint, when we visit  a site, the brpwser downloads the base file first 
+
+Inside that base HTML file, there are links/tags pointing to the other files. The browser reads these links and fetches 
+each individual object one by one. These objects can even live on different servers across the world
+
+URL anatomy:  Every single object on the internet has a unique address with 2 main parts
+
+1) Host name: identifies which computer/server on the internet holds the file 
+2) Path name: Identifies the exact folder and file locn inside that server's storage 
+
+
+
+Page 3 
+HTTP is the standardiesd commncn language that lets the client and server talk to each other to exchange these objects 
+
+Client(the requester)
+Programs like firefox on a PC or safari on an iphone
+Its job is to send HTTP requests asking for files, receive the responses and upload the obbjects on the screen
+
+Server(the provider)
+Software like Apache or nginx running on a remote computer
+Job is to listen for incoming requests, grab the requested object from its disk and send an HTTP response containing that object
+back across the network 
+
+
+So what happens is when we type www.yahoo,com 
+1) DNS lookup- first browser asks the DNS systemm to resolve it, and receives the yahoo's IP address 
+2) Connection and base request- the browser connects to that ip and sends an initial GET requets fir the base document TLS handshakle to  connect to that Port 443 via the TCP 3 way handshake
+3) yahoo server sends back the base html file 
+4) parsing- the browser reads the base html file finds reference to the images, stylesheeets and JS files 
+and sends out the follow up GET requests to fetch the asset 
+5_ the browser puts all those downloaded pieces together and displays them 
+fully interactive webapge on the screen 
+
+
+Slide 4 
+
+How HTTP uses TCP 
+1) Socket creation: Before sending a HTTP message, the browser creates a socket 
+and initiates a TCP connection to the server's default HTTP port 
+2) the web server accepts the connection 
+3) Data exchange: the http request and response messages travel through this TCP pipe
+4) once the data trasnfer completes, the TCP connection closes 
+
+HTTP server is stateless because the server does not keep track of what we requested previously. If we ask 
+for the same file 10 times in a row. the server treats each request as if it has never seen before 
+
+
+Protocols that track history are compelx becuae both machines must continuoulsy synchronise what happened 
+
+Slide 5
+
+When a web page has multiple objects, there are 2 distinct strats for handling the underlying TCP connections 
+
+1) Non persistent HTTP
+the rule: one connection per object 
+the flow 
+1) open a new TCP connection 
+2) request and trasnfer atmost onne single object 
+3) close the tcp connection immediately 
+
+drawback- if a webpage has 10 images, the browser has to open and close 10 separate TCP connections 
+This causes signifiacnt latency becaus eevery new connection forces a fresh TCP handshake round trip 
+
+2) Persistent HTTP 
+the rule: one open connection for multiple objects 
+the flow:
+1) open one single TCP connection to the server 
+2) the browser request the base html then reuses the same open connection to fetch images back to back sequentially one at a time 
+3) close the tcp connection only after all objects are downloaded or after an inactivity timeout 
+
+advantage: eliminates the round trip delay of repaaated TCP handshales, speeding up page load time drastically 
+
+
+Slide 6 and 7 
+Whole flow of non persistent HTTP fetching a webpage with 1 base HTML file and 10 referenced jpeg images 
+
+1) Establish TCP connection 
+the client knocks on the server by initiating a TCP connection to website on port 80  
+the server is listening on port 80, acceots the handshake and notifies the client that TCP pipe is open 
+
+2) Sends the HTTP request- 
+the client pushes an HTTP request message into the newly opened TCP socket 
+
+3) server handles and responds
+the server reads the request, retrievs home.index from its disk, bundles it into an HTTP response message 
+and sends it back across the socket 
+
+4) TCP connectionn closes 
+because this is non persistent, the server closes the TCP connection immediately after sending that single file 
+
+5) Client parses the base file 
+the client receives the response, renders the base HTML text on the screen and parses the tags to discover references to 10 JPEF images
+
+since the connectin is closed, the browser has to run all steps from scratch for every sibgle image 
+
+this total requeires 11 separate tcp connections
+
+
+Slide 8
+
+RTT(Round Trip Time)- it is the time taken for a small packet of data to travel from the client 
+to the server and back again 
+
+
+Response time breakdown(per object)
+1st RTT(TCP handshake)- the client sends a connection request and the server acknowledges it 
+, that is 1 full round trip just to open the pipe 
+
+2nd RTT(HTTP request and response start)- the client sends the GET request and the server processes 
+and returns the first ffew bytes of the HTTP response. that is the 2nd round trip 
+
+File transmission time- the time ther server needs to actiually push the entire body of the file down the wirre 
+
+Reponse Time per object=2RTT+file transmission time 
+
+problem- in the non persistent mode, the connection closes after every file, if a page contains 1 base HTML file 
+and 10 images you must pay this full 2RTT penalty 11 separate times 
+
+Slide 9- 
+Issues with the non persistent HTTP
+1) Heavy RTT penalty: 2 rtts are required for every single object 
+2) Allocating memory buffers and tracking variables for dozens of new TCP sockets puts heavy strain on both 
+the client OS and the server OS
+3) parallel connectionns worsened the server load, the web page loaded faster for that single user
+it created problems like for oither users less internet for them since the netowrk wil get ditributed across those connections 
+
+
+Hoe persistent HTTP solves this- 
+1) open pipe- server leaves the tcp connection open after sending its first response 
+2) reusing the connection- all subsequent http requests for images, scripts are send over the same single TCP connection 
+3) pipelining- the client sends the requests as soon as it encounters referenced objects in HTML, without waiting to tear down and rebuild connections 
+4) because the tcp connection is already established the browser eliminated the first RTT entirely for subsequent objects.
+
+
+Slide 10- 
+
+GET- Used to download the files
+
+POST- used primarily while sub,itting forms
+The user's input ddata is placed securely inside the entity body of the HTTP request ratherr than in URL
+
+GET Method- we can still send the user data using GET, but it is attached directly to URL as query parameter after a ? symbol 
+Best for public, non sensitive actions like search engine queries that we might want to bookmark or share 
+
+
+HEAD Method- asks the server to return only the HTTP headers, leaving out the actual file body 
+Useful for debugging, checking if a URL is valid or verifying the file size 
+
+PUT Method- used to upload a new file or completely overwrite an existing file at a specified URL path
+the replacement conent is sent inside the entity body oif the request 
+
+
+Slide 11- 
+When a server answers the HTTP request, the very first line of its response contains a 3 digit code 
+indicating whether the request succeeded or failed 
+
+200 Ok- Success request succeeded, requested objecct later in the message 
+
+301 Moved permanently- Requested file has moved permanently to a new URL. the server specifies the new destination in the 
+location header and your browser automatically redirects there. 
+
+400 Bad request: Request message not understood by the server 
+
+404 Not found: the server is reachable but the exact path or file we requested does not exist on the server 
+
+505 HTTP version not supported- server does not support this HTTP version used in client's request message 
+
+
+Slide 12-13:  Since HTTP is fundamentally stateless, websites use cookies to give users a persistent 
+identity across mulltiple request
+
+4 Core components-
+1) Set-cookie: header in HTTP response, the server sends a unique id down to the browser 
+2) cookie- header in future HTTP requests, the browser echoes that unique id back to the server with every new request 
+3) Client side cookie storage- a small text file on the users computer securely managed by the web browser 
+4) back end databbase- a server database table that maps each unique cookie id to thaat user's profile 
+
+
+Example
+
+lets say Susie is shopping online . her browser already has a cookie stored for another website 
+but she has never visited Amazon on this browser before 
+
+First visit(The anonymous request) 
+Client action- susie types amazon.con here browser sends a get request 
+the browser doesnt have any cookie as of now 
+
+2) the amazon server receives the request and sees no cookie. it realises susan is a brand new visitor 
+
+the server generates a unique number, 1678 and creates a new row in the backend database for this ID 
+
+server sends back the web page along with a new special instruction in the HTTP response header 
+
+3) Susan's browser receives teh page and set cookie header 
+the browser writes into tis local cookie storage file on susan's hard drive 
+
+4) susan clicks on item to view details 
+because she is on amazon, the browser automatically attaches here amazon id to the request header 
+
+amazon reads 1678  queries its backend database, finds susan's session and performs cookie specific actions 
+
+
+Slide 14
+
+Cookies are used for 
+1) Authorisation: Keeping you logged into your account without asking for your password on every page click 
+
+2) Shopping Carts:Preserving items in the cart as we browse through an e commerce catalog 
+
+3) Recommeendations- preserving items in the cart as we browse through an e commerce catalog 
+
+Challenge- how to keep state-
+HTTP itself cannot hold state, so the burden is split 
+
+1) at protocol endpoints the client and server store the actual data or id locally across multiple transcactions
+
+2) in messages- the cookie strings embedded in the HTTP request/repponse headers act as transport carrier that passes state backl and forth 
+
+
+Aside-
+1) sites can monitor yyour full nrowsing habits, clicks and dwell times 
+
+Slide 15
+
+client sends an HTTP request to the main server 
+server sends a HTTP reply containing the base HTML file
+
+the browser parses the HTML and discovers an embedded ad component referencing an external
+and network server 
+
+the  browser automatically fires a sparate http get request to adx.com to retrieve the banner ad 
+
+
+
+Slide 16-19 '
+
+First party cookie- Set by the website you intentionally visited 
+the website records in its database that user 1634 rread the sports section on this date 
+
+Third party cookie- when the browser requests the add from adx.com 
+the request includes a ny times header 
+adx sets its own cookie in our browser 
+in its own database adx logs user 7492 
+
+we never typed adx.com in our browser but still they gave us tracking id 
+
+
+Slide 20- GDPR 
+Legal definition- online identifiers such as IP addresses and cookies IDs leave digital traces 
+
+when combined with other server data these identifiers create behaviourial profiles that can pinpoint and track natural persons 
+
+The legal classification- Becase cookie ids can identify an individual, they are legally classified as personal data under EU law
+
+Websites cannot traack users by default 
+They are legally required to display explicit cookie consent prompts giving users granular control to accept, customise or 
+deny non essential tracking cookies before data collection begins 
+
+Slide 21
+
+Web Cache is a temporary storage location that holds copies of website files 
+
+so on the first vsit, our browser requests files from the websites mainn server, the server sends the file and a copy is saved in the cache so next time
+instead of downloading the same files again from the internet, our device loads them directly from the local cache
+Web caching is a core optimisation technique to speed up webb access and reduce the network traffic  
+
+Primary goal- Fulfill client HTTP requests locally without involving the origin server whenever possible
+
+
+Browser Configuration- The user's browser is set up to route all outgoing HTTP requests through an intermediary Web Cache(proxy server)
+
+When a client requests a web object, the cache checks its local storage 
+If the object is already stored in cache. The cache immediately sends the file back to the client directly. The origin server is never contacted 
+
+If object is not in the cache, the web cache opens a connection to the remote origin server, downloads the requested file, saves a local copy 
+in its storage for futire requests and forwarsd the file to the client 
+
+
+Benefits of web caching- 
+reduces response time
+cuts bandwidth cost 
+
+
+Slide 22-
+How cache behaves at protocol level and why networks deploy them
+
+Dual Role- Acts as a server: To the original user's computer, receiving requests and handing back files 
+Acts as a client- To the remmote origin server, downloading the requested objects on behalf of the user when there is a cache miss 
+
+Cache control derivatives- The origin server specifies whether an object can be cached via response headers 
+Cache conntrol max age=seconds tells the cache how long the file stays before it must re validdate with the origin server 
+Cache control no cache- tells  the cache it cannot serve a stored copy without first checking back with the origin serrver for updates 
+
+Web caching drastically reduces the response time, the cache is located right on the local network 
+Reduces access link congestion- fewer requests leave the organisation's border router 
+
+Slide 23- 
+
+Given, instinal lan- High capacity 1 Gbps Access link: Low capacity 
+Internet RTT: 2 seconds from router to origin servers 
+Web object size: 100 k bits 
+Request rate: 15 requests/sec 
+
+Traffic and utilisation rate
+
+data arrival rate=15req/secx100kbits = 1500kbps=1.5mbps
+access link  = 150 mbps/154mbps=97 percent 
+lan utilisation=150/1000mbps = 0.0015 
+
+Even though the LAN is fast and internet delay is only 2 seconds, the 97 perrcent congested access link creates massive traffic jams casuing
+download to take minutes 
+
+Slide 24 
+Option 1 — Buy a Faster Access LinkThis solution tries to fix the traffic jam by upgrading the ISP bandwidth by $100\times$.
+
+The Change:Access link rate is upgraded from $1.54\text{ Mbps} \to \mathbf{154\text{ Mbps}}$.
+
+New Performance Calculations:Traffic Rate: $15\text{ requests/sec} \times 100\text{ Kbits} = 1.
+
+
+50\text{ Mbps}$ (unchanged).Access Link Utilization:$$\frac{1.50\text{ Mbps}}{154\text{ Mbps}} \approx \mathbf{0.0097}\text{ (less than } 1\%\text{)}$$
+
+The Resulting Delay:Because utilization dropped from $97\%$ to under $1\%$, queueing delay drops to virtually zero ($\approx \text{milliseconds}$).Total Delay: $2\text{ sec (Internet RTT)}
+
+ + \text{milliseconds (access link)} + \mu\text{secs (LAN)} \approx \mathbf{\sim 2\text{ seconds}}$.
+ 
+ The Trade-off / Downside:Upgrading leased enterprise access lines (e.g., from T1 to T3/OC-3 lines) carries high, recurring monthly ISP subscription costs.Slide 
+ 
+ Slide 25 
+
+
+ 2: Option 2 — Install a Local Web Cache (Proxy)Instead of paying for an expensive pipe upgrade, this approach keeps the slow $1.54\text{ Mbps}$ access link and installs an inexpensive local server inside the LAN.
+ 
+ The Setup:Keep the access link at  $1.54\text{ Mbps}$.Place a local web cache server directly on the fast $1\text{ Gbps}$ institutional LAN.
+ 
+ The Cost Advantage:A local cache is a one-time purchase of cheap commodity hardware, avoiding high recurring monthly ISP bandwidth bills.
+ 
+ The Question Posed at the Bottom:How does serving a percentage of requests directly from this local cache (the "cache hit rate") lower the access link utilization and calculate the new average delay?
+
+
+ Slide 26 
+
+ Shows the math like how local cache outperforms both an overloaded link andd an expensive bandwidth upgrade. 
+
+ Assumptions 
+ Cache hit rate=0.4 
+ Total traffic  demand=1.5Mbps 
+ Access link capacity=1.54 mbps 
+
+ Internet round trip+transfer time to origin=2.01 seconds 
+
+ 40 % of requests are staisfied dorectly bu the local cache over the dfast 1 Gbps LAN, taking negligible time annd generating zero traffic on the access link. 
+
+ the remaining 60% must cross the access link tto reaach the origin servers 
+
+ Actual Link Traffic=0.6x150mbps=0.9 mbps 
+
+ Link utilisation=0.9/1.54=58 percent 
+
+ the utilisation drops so massive queeuing blocking disappears 
+
+ Average dealy=0.6xorigin delay+0.4xcache dellay=1.2 seconds 
+
+ Slide 27- 
+This slide addresses the freshness problem: How does a cache or browser know if its stored copy is still up to date with the origin server without downloading the whole file again?
+
+The Goal:
+
+Avoid wasting network bandwidth and transmission time re-downloading files that have not changed on the server.
+
+The Mechanism (If-modified-since:):
+
+When a client/cache requests a file it already has stored from an earlier download, it adds a conditional header specifying the timestamp of its stored copy:
+If-modified-since: <date>
+
+Scenario A (File Has NOT Changed):
+
+The server checks the file's last modified timestamp on disk. If it hasn't changed since <date>:
+
+The server replies with status code 304 Not Modified.
+
+No file body is sent (saving bandwidth and transmission delay).
+
+The client simply reads and renders its existing local cached copy.
+
+Scenario B (File HAS Changed):
+
+If the file was updated on the server after <date>:
+
+The server replies with standard status code 200 OK and attaches the updated file payload (<data>).
+
+The client replaces its outdated local copy with the new version.
+
+
+Slide 28- 
+
+This slide explains why HTTP/2 was created by highlighting the major performance bottlenecks in HTTP/1.1.
+
+Primary Objective: Reduce page load delays when fetching multiple web objects over a single connection.
+
+HTTP/1.1 Inefficiencies:
+
+Strict In-Order Responses (FCFS): HTTP/1.1 introduced pipelining (sending multiple requests without waiting for each reply), but the server was forced to return responses in strict First-Come-First-Served (FCFS) order.
+
+Head-of-Line (HoL) Blocking: If the first requested file is a massive video or slow dynamic script, all small files (CSS, icons, HTML) queued behind it are completely blocked until the large transfer finishes.
+
+TCP Packet Loss Stall: If a single TCP packet drops along the way, TCP stops delivery of all subsequent data on that stream until the missing packet is retransmitted.
+
+Slide 29:  HTTP/2 — Server Flexibility and Innovations
+
+This slide details the architectural solutions HTTP/2 (standardized in 2015 via RFC 7540) introduced to solve those limitations.
+
+Backward Compatibility:
+
+Core HTTP semantics remain unchanged: methods (GET, POST), status codes (200, 404), and standard header fields work just as they did in HTTP/1.1.
+
+Key Enhancements:
+
+Priority-Based Scheduling: The client can assign priorities/weights to requested objects (e.g., download critical CSS before low-priority footer images) rather than relying on rigid FCFS ordering.
+
+Server Push: The server can proactively send critical resources (like stylesheets or scripts) to the client’s cache before the client explicitly parses the HTML and asks for them.
+
+Binary Framing & Multiplexing: Instead of sending whole files sequentially, HTTP/2 cuts objects into small, tagged binary frames and interleaves them across the same TCP connection, eliminating application-level Head-of-Line blocking.
+
+
+Slide 30- 
+This slide visually demonstrates how Head-of-Line (HoL) blocking hurts performance in HTTP/1.1.
+
+The Scenario:The client requests four objects back-to-back: one large object ($O_1$, such as a large video file) followed by three tiny objects ($O_2, O_3, O_4$, such as CSS files or small icons).
+
+The HTTP/1.1 Mechanism (Strict FCFS):Because HTTP/1.1 serves responses sequentially in strict First-Come-First-Served order, the server must transmit the entirety of the massive blue object $O_1$ before it can begin sending $O_2$.
+
+The Impact:Even though $O_2, O_3,$ and $O_4$ require very little transmission time, they are forced to wait at the back of the line until $O_1$ finishes completely. This delays critical styling and layout rendering in the browser.
+
+Slide 31-
+
+ HTTP/2: Mitigating HOL Blocking (Interleaved Framing)
+
+This slide shows how HTTP/2 completely eliminates application-layer Head-of-Line blocking.
+
+The Solution (Binary Framing):HTTP/2 slices large and small objects into tiny binary frames.
+
+Interleaved Transmission:Rather than sending all frames of $O_1$ consecutively, the server interleaves the frames of $O_2, O_3,$ and $O_4$ among the frames of $O_1$ over the same single TCP connection.
+
+The Result:The small objects ($O_2, O_3, O_4$) finish transmitting almost immediately because their few frames are slipped in near the front.
+
+$O_1$ is only negligibly delayed, while the browser receives its essential layout files much faster and renders the page without waiting for the large object to finish.
+
+Slide 32
+ Transitioning from HTTP/2 to HTTP/3While HTTP/2 fixed Head-of-Line blocking at the application layer, it revealed a deeper problem at the transport layer (TCP), leading to HTTP/3.
+ 
+ The Lingering HTTP/2 Flaw (TCP HoL Blocking):
+ 
+ All HTTP/2 streams share a single TCP connection.
+ 
+ TCP requires bytes to be delivered in strict sequential order. If even a single TCP packet is dropped/lost in transit, TCP halts all data delivery to the application until that missing packet is retransmitted.
+ 
+ Consequently, one lost packet intended for $O_1$ freezes the delivery of $O_2, O_3,$ and $O_4$ as well.
+ 
+ Lack of Native Encryption:Standard TCP connections offer no built-in security unless wrapped in an additional TLS handshake layer.
+ 
+ The HTTP/3 Solution (QUIC over UDP):HTTP/3 moves away from TCP entirely and runs over QUIC (built on top of UDP).
+ 
+ Independent Streams: Packet loss in one object stream does not stall other streams.
+ 
+ Built-in Security: TLS encryption is baked directly into the transport handshake for faster, secure connections.
+
+ Slide 35- 
+
+ What is QUIC?
+
+An application-level transport protocol developed by Google (and later standardized by the IETF) that runs on top of UDP.
+
+Goal: Increase HTTP performance, cut connection latency, and eliminate TCP Head-of-Line blocking.
+
+Real-World Deployment: Deployed at scale across Google services (Chrome browser, YouTube, Google Search servers).
+
+The Traditional Stack Diagram (HTTP/2 over TCP):
+
+Application: HTTP/2 sitting on top of TLS (encryption).
+
+Transport: TCP (manages reliable delivery, ordering, and congestion).
+
+Network: IP (packet routing).
+
+Bottleneck shown: Because TLS and TCP are separate layers, the client must do a TCP handshake first, followed by a separate TLS handshake, adding multiple round-trip delays before application data can flow.
+
+
+A congestion controller is a built-in traffic management algorithm in transport protocols (like TCP and QUIC) designed to prevent the sender from flooding the network with more data than the intermediate routers and links can handle
+
+
+Slide 36
+
+This slide outlines how QUIC implements transport-layer reliability and security on top of UDP.
+
+Reusing Proven Mechanics: QUIC adapts battle-tested TCP concepts for error handling, packet loss detection, and congestion control algorithms rather than inventing them from scratch.
+
+Consolidated Connection Setup: Reliability, congestion parameters, cryptographic state, and authentication are all established simultaneously in one single round trip ($1\text{ RTT}$) or even $0\text{ RTT}$ on return visits.
+
+Stream-Based Multiplexing: Multiple application streams share one underlying QUIC connection:
+
+Each stream gets independent reliable delivery (so errors stay isolated).
+
+All streams share a common congestion controller across the connection.
+
+Slide 2: QUIC Connection Establishment ($2\text{ RTT}$ vs. $1\text{ RTT}$)
+
+This slide visually compares the connection startup time of standard HTTPS/TCP versus QUIC.
+
+Traditional TCP + TLS (Left Side):Handshake 1: The client performs a standard TCP 3-way handshake to establish transport reliability and congestion tracking ($1\text{ RTT}$).
+
+Handshake 2: After TCP connects, the client initiates the TLS handshake to negotiate cryptographic keys and authenticate certificates ($1\text{ RTT}
+
+$).Total Penalty: $2\text{ serial handshakes}$ ($2\text{ RTTs}$) pass before any application data can be sent.
+
+QUIC Handshake (Right Side):QUIC combines transport setup and cryptographic key exchange into a single combined handshake.
+
+Total Penalty: Only $1\text{ RTT}$ to establish reliability, congestion state, and TLS 1.3 encryption, allowing application data to travel right alongside the first flight.
+
+Slide 3: Streams, Parallelism, and Head-of-Line Blocking (HTTP/2 Limitation)
+
+This slide provides the architectural breakdown showing why HTTP/2 suffers from transport-level stalls.
+
+Layer Separation in HTTP/2:At the Application Layer, multiple HTTP requests are multiplexed and encrypted into streams via TLS.
+
+At the Transport Layer, everything passes through a single monolithic TCP Reliable Data Transfer (RDT) and Congestion Control pipeline.
+
+The Fatal Flaw (Red "error" on diagram):Because TCP manages reliability for the stream as a whole, a packet transmission error in one stream halts the entire TCP RDT pipe.
+
+The transport layer refuses to pass any received bytes up to TLS and the application, causing every independent HTTP request to stall until the dropped packet is retransmitted.
+

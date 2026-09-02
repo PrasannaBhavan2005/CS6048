@@ -1,0 +1,258 @@
+Video Streaming and CDNs
+
+Slide 1
+This slide outlines why video streaming dominates internet traffic and the core networking challenges it introduces.
+
+Massive Bandwidth Dominance:Video streaming platforms (Netflix, YouTube, Amazon Prime Video) account for roughly $80\%$ of all residential ISP network traffic.
+
+Challenge 1 (Scale):How can a central content provider serve billions of concurrent global users without collapsing servers or choking network links?
+
+Challenge 2 (Heterogeneity):End users connect using wildly different devices and network conditions: high-speed wired fiber vs. weak mobile cellular signals, $4\text{K}$ desktop monitors vs. low-resolution smartphones, and fluctuating bandwidth availability.
+
+The Solution:Deploy a distributed, application-level infrastructure using Content Delivery Networks (CDNs) and adaptive streaming protocols to move video content closer to users and adapt dynamically to device capabilities.
+
+Slide 2:
+
+ Multimedia — Video Structure & Compression CodingThis slide breaks down what digital video is at a data level and how video compression algorithms cut down file sizes.
+
+Digital Video Basics:A video is simply a sequence of still images (frames) played at a fixed frame rate (eg 24 frames/second).
+
+Frames is a single still photograph in a sequence of images 
+
+Pixel is the smallest individual dot of color and loight that makes up a digital image or display screen 
+
+Each digital image is a 2D grid (array) of pixels, where each pixel is represented by bit values indicating color and brightness.
+
+Video Compression (Coding):Raw uncompressed video is far too massive to stream over the internet, so coders compress it by removing statistical redundancy:
+
+Statistical redundancy is the repetitive or predictable patterns in data where certain values occur far more frequnetly than pure randomness would suggest, 
+
+Spatial Redundancy (Within a Single Image):Adjacent pixels in a frame often have identical colors (e.g., the purple sky at the top of frame $i$).
+
+
+
+Temporal Redundancy (Between Consecutive Frames):Adjacent frames in time look nearly identical except for moving objects (e.g., the runner moves slightly between frame $i$ and frame $i+1$, but the background sky remains unchanged).
+
+Compression: Instead of sending a full brand-new image for frame i+1, the encoder only transmits the small difference (motion vector and changed pixels) relative to frame $i$.
+
+
+
+Slide 3
+This slide explains how video data rates are structured after compression.
+
+CBR (Constant Bit Rate):
+
+The video is compressed to maintain a fixed, unchanging data rate (e.g., always 2 Mbps) throughout the entire video.
+
+Trade-off: Easy to plan network bandwidth, but quality drops during fast-action scenes and bandwidth is wasted during still scenes.
+
+VBR (Variable Bit Rate):
+
+The bit rate dynamically adjusts depending on how much spatial and temporal complexity exists in each scene.
+
+A talking head with a still background needs very few bits, while a rapid action scene with explosions generates much more data.
+
+Common Video Standards:
+
+MPEG-1 (CD-ROM): ~1.5 Mbps (basic quality used in older media).
+
+MPEG-2 (DVD): 3–6 Mbps (standard definition DVD quality).
+
+MPEG-4 / H.264 (Internet standard): Highly flexible, scaling from 64 Kbps (mobile) up to 12 Mbps (HD/4K).
+
+Slide 5
+
+ Streaming Stored Video — Core Network Challenges
+
+This slide illustrates the baseline client-server streaming model (pre-recorded video stored on a server and watched on demand) and its primary obstacles.
+
+The Basic Model:
+
+Video files sit on a remote server, pass through the public Internet, and play on the client's screen.
+
+Challenge 1: Bandwidth Variation Over Time:
+
+Available throughput between server and client is never constant. It fluctuates continuously due to:
+
+Wi-Fi interference within the home.
+
+ISP access link traffic.
+
+Congestion on core Internet routers.
+
+Server load.
+
+Challenge 2: Playback Stalls & Quality Drops:
+
+If network congestion causes packets to drop or arrive late, the client runs out of video data to display, leading to buffering freezes (rebuffering) or degraded video quality.
+
+
+Slide 6 
+
+This slide breaks down how streaming differs from a traditional "download-then-play" model using a cumulative data vs. time graph.
+
+1. Video Recorded (Black Curve):The video is captured and encoded at a constant rate (e.g., $30\text{ frames/second}
+
+$).2. Video Sent (Red Curve):The server begins transmitting video packets across the network.
+
+The horizontal gap between sending and receiving represents network delay (propagation, transmission, and queueing).
+
+3. Video Received & Played Out (Blue Curve):The client receives frames and renders them at the same original playback speed ($30\text{ frames/second}$).
+
+Definition of Streaming (Dotted Box):The client does not wait for the entire multi-gigabyte file to finish downloading.
+
+Instead, playback begins almost immediately: the client displays the early segments of the video while the server is concurrently transmitting the later segments across the network.
+
+Slide 7
+
+ Streaming Stored Video — Challenges & Continuous PlayoutThis slide focuses on the strict timing requirements of video playback and why simple transmission fails without a buffer.
+ 
+ Continuous Playout Constraint:Once the user presses play, frames must appear smoothly and continuously at the exact frame rate (e.g., 1 frame every $33.3\text{ ms}$ for $30\text{ fps}$).
+ 
+ If a frame is not present in memory when its exact playback timestamp arrives, the video freezes (rebuffering / buffering wheel)
+ 
+ .The Problem (Network Jitter):Network delays on the Internet are variable (jitter) due to fluctuating congestion.
+ 
+ Because packets arrive in bursts or get delayed unpredictably, the receiver cannot rely on just-in-time delivery.
+ 
+ Solution: The client must build a client-side buffer (a temporary holding queue in RAM) to smooth out network bursts and keep playout continuous.
+ 
+ Additional Practical Challenges:Client Interactivity: Users randomly pause, fast-forward, rewind, or skip ahead, requiring the stream to cancel current chunks and request new offsets.
+ 
+ Packet Loss & Retransmission: Lost packets require retransmission delays, which risk draining the client buffer before the replacement data arrives.
+
+Slide 8
+
+This slide provides the graphical timing breakdown of how a client-side buffer operates to prevent playback freezes.
+
+Constant Bit Rate Transmission (Red Line): The server transmits video bytes into the network at a steady pace.
+
+Variable Network Delay (Jitter): Because internet delays fluctuate unpredictably, the rate at which the client receives bytes fluctuates (the black/wavy arrival pattern).
+
+Client Playout Delay (Horizontal Blue Arrow at Bottom): The intentional delay between when the first byte arrives and when the media player actually starts rendering video on the screen.
+
+Buffered Video (Vertical Blue Arrow): The height difference between the received data and the played-out data represents the reserve cushion of video sitting safely in device RAM
+
+.Core Takeaway: By delaying playout slightly at the start, the buffer builds a reserve large enough that variable network delay (jitter) never causes the playout curve to overtake the reception curve (which would freeze the screen).
+
+Slide 9:
+
+ Streaming Multimedia — DASH (Dynamic, Adaptive Streaming over HTTP)This slide introduces DASH, the industry standard protocol used by Netflix, YouTube, and Amazon to deliver video smoothly over varying network conditions.
+ 
+ Server Responsibilities:Chunking: Slices the full video file into small temporal segments (typically $2\text{–}10\text{ seconds}$ chunks).
+ 
+ Multi-Rate Encoding: Encodes each chunk at multiple distinct quality levels and bitrates (e.g., $360\text{p at } 500\text{ Kbps}$, $720\text{p at } 2\text{ Mbps}$, $4\text{K at } 15\text{ Mbps}$).
+ 
+ CDN Replication: Replicates these multi-quality chunk files across distributed CDN edge servers worldwide.
+ 
+ Manifest File (MPD): Generates a master index file listing URLs, bitrates, and chunk numbers for each quality level.
+ 
+ Client Responsibilities (Client-Driven Intelligence):Bandwidth Probing: Constantly measures real-time download speed and client buffer fullness as each chunk arrives.
+ 
+ Adaptive Requesting: Uses the manifest file to request chunks one at a time via standard HTTP GET requests:
+ 
+ High Bandwidth / Buffer Full: Asks for the next chunk in $4\text{K}$ or $1080\text{p}$
+ 
+ .Bandwidth Drops / Buffer Draining: Seamlessly downgrades and requests the next chunk in $480\text{p}$ or $720\text{p}$ to avoid buffering freezes.
+ 
+ Server Switching: Dynamically requests chunks from alternative or geographically closer CDN nodes if the current server slows down.
+
+Slide 10 
+
+This slide focuses on where the decision-making happens in DASH. The server remains a passive file store, while the client's video player runs the decision logic:
+
+"When" to Request a Chunk:The client monitors its RAM buffer continuously.
+
+It paces requests so that the buffer neither runs completely dry (buffer starvation / freeze) nor overfills and wastes device memory (buffer overflow).
+
+"What" Encoding Rate to Request:The client measures real-time network throughput for each downloaded segment.
+
+If bandwidth is abundant, it requests higher bitrates ($1080\text{p} / 4\text{K}$). If bandwidth drops, it instantly steps down ($720\text{p} \to 480\text{p}$) so the video keeps playing without pausing.
+
+"Where" to Request the Chunk:Using URLs provided in the manifest file, the client can select the CDN edge server that is geographically nearest or exhibiting the lowest network latency.
+
+The Full Streaming Formula:$$\text{Streaming Video} = \text{Video Encoding (compression)} + \text{DASH (adaptive logic)} + \text{Playout Buffering (safety cushion)}$$
+
+Slide 11: 
+\
+Content Distribution Networks (CDNs) — The Scaling DilemmaThis slide sets up the core infrastructure problem of delivering massive video libraries to a global audience.
+
+The Challenge: How to deliver high-bandwidth video from a catalog of millions of titles to millions of simultaneous users across the world without collapsing.
+
+Option 1: The Centralized "Mega-Server" Model (Why it fails):
+
+Single Point of Failure: If the central data center goes offline or experiences a power/fiber outage, the entire service goes down globally
+
+.Network Congestion at the Source: Concentrating millions of simultaneous video streams onto a single facility's outgoing links creates massive bottlenecks.
+
+Long Distance & High Delay: Distant users across oceans experience high RTTs, packet loss across multiple transit ISPs, and poor throughput.
+
+Verdict (Red text at the bottom): "...quite simply: this solution doesn't scale." A centralized architecture cannot support internet-scale video streaming, setting up the need for distributed CDN edge deployments.
+
+Slide 12 
+
+This slide explains the practical solution to the scaling dilemma (Option 2: Deploying a CDN) and contrasts the two main design philosophies used to build CDNs:
+
+The CDN Core Concept:Instead of serving everyone from a single central mega-server, store and serve replicated copies of video content from thousands of servers geographically distributed across the globe.
+
+Strategy 1: "Enter Deep" (Pioneered by Akamai)
+
+Philosophy: Deploy server clusters deep inside local access ISPs and residential networks all over the world
+
+.Advantage: Places content physically and topologically as close to end-users as possible, cutting latency, eliminating transit link congestion, and increasing throughput.
+
+Trade-off: High operational and maintenance complexity to manage hundreds of thousands of individual server clusters deployed in thousands of remote ISP locations
+
+.Strategy 2: "Bring Home" (Used by Limelight / Fastly):Philosophy: Deploy a smaller number (tens or hundreds) of much larger server clusters located in key Points of Presence (POPs) connected directly to major Internet Exchange Points (IXPs).
+
+Advantage: Simpler to maintain, manage, and configure because hardware is concentrated in fewer, larger facilities.
+
+Trade-off: Content sits slightly further from the end user compared to "Enter Deep", traversing more intermediate network hops.
+
+Slide 13:
+
+ Akamai Today — Real-World Edge ScaleThis slide demonstrates the massive real-world scale of modern "Enter Deep" CDN infrastructure using metrics from Akamai (the world's largest CDN provider):
+ 
+ Server Count & Reach: Over $360\text{K}$ servers deployed across $4,200+$ locations, embedded within $1,350+$ distinct network providers across $135\text{ countries}$ and $840+$ cities.
+ \
+ Traffic & Throughput:Handles over $100+\text{ million hits per second}$.Delivers over $7+\text{ trillion content items per day}$.Handles peak traffic exceeding $175+\text{ Tbps}$ (with peaks over $250+\text{ Tbps}$).
+ 
+ Key Takeaway: The "Enter Deep" model allows CDN providers to absorb a huge percentage of global Internet video and web traffic right at the edge of the network before it ever congests the core Internet backbones.
+
+ Slide 14-
+
+ This slide details the concrete end-to-end workflow Netflix uses to deliver video to users worldwide:
+
+Netflix Open Connect CDN:
+
+Netflix operates its own custom CDN called Open Connect.
+
+Copies of popular content (e.g., the show Mad Men) are pre-replicated across thousands of storage appliances placed directly inside local ISPs worldwide.
+
+The Request & Streaming Workflow:
+
+Manifest Retrieval: When a subscriber clicks a title, the client application first queries Netflix control servers in the cloud (AWS), which return a manifest file.
+
+Adaptive Bitrate Selection: Using the manifest, the client determines the optimal CDN node and requests chunks at the highest bitrate the user's connection can sustain.
+
+Dynamic Failover: If the selected path experiences network congestion, the client dynamically downgrades the bitrate or switches to an alternate nearby Open Connect node.
+
+Slide 15:
+
+ Content Distribution Networks (CDNs) — Over-The-Top (OTT) Delivery
+
+This slide explains the OTT delivery model and the fundamental management decisions CDN operators must solve.
+
+What is OTT ("Over The Top")?
+
+OTT describes services like Netflix, YouTube, or Hulu that deliver streaming media directly over the public Internet without managing or owning the underlying network infrastructure.
+
+The Internet operates merely as a dumb, best-effort host-to-host transport pipeline ("Internet host-host communication as a service").
+
+Key OTT CDN Challenges (Managing from the Edge):
+
+Because OTT providers have no direct control over core Internet router routing or ISP line congestion, they must make two major algorithmic decisions:
+
+Placement Policy: What specific video titles/chunks should be pushed to which CDN edge nodes ahead of time? (e.g., placing trending regional movies in local servers while keeping rare titles in centralized storage).
+
+Server Selection & Adaptation Policy: Which CDN node should a particular user connect to in real time, and at what encoding bitrate?

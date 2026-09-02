@@ -1,0 +1,125 @@
+Basics before we start the lectures
+
+HTTP is the Layer 7 protocol that
+standardieses how web clients communicate with web browsers
+
+Every HTTP exchange consists of a formateed message sent from client to
+server, followed by a response
+
+HTTP Methods-
+1: GET: Fetch data
+2: POST: Submit data to be processed
+3: PUT: Replace an entire resorce
+4: PATCH: Partially modify a resource
+5: DELETE: Remove a resource 
+6: HEAD: Fetch only the headers
+
+
+HTTP Status codes
+1: 1XX: request received, continuing process 
+2: 2xx: action was received and accepted(200 Ok, 201 Created, 204 No content)
+3: 3xx: Further action needed(301 Moved permanently, 302 Not found, 304 Not modified)
+4: 4xx: Problems on the client side(400 Bad request, 401 unauthorised, 403 forbidden, 404 not found)
+5: 5xx: Server failed to fulfill a valid request(500 internal server error, 502 bad gateway, 503 service unavailable, 504 gateway timeout)
+
+
+HTTP is stateless  because of 
+1) Massive scalability- The server doesnt hold open memory, tracking variables, or active session state
+for millions of simultaneous users. It processes the request, sends the answer and immedoiately frees its memory
+
+2) Server redundancy: If a website  runs on 10 diff servers, request 1 can hit server A, and request 2 can hit server B without errors
+server b doesnt need to  know what server A did 
+
+It is stateless so that the internet can serve billions of people without servers
+running out of memory or breakng doen when handling multiple users
+
+
+ TCP/IP Model: It is a layered networking framework that explains how data is communicated between devices over a network
+ using standardies protocols to ensure reliable and efficient transmission
+
+ Defined as 4 layer architecture of Application, Transort, Internet and Network Acccess Layers
+Serves as the core framework of modern Internet and networking systems
+
+
+1) Application Layer- It is the top layer of TCP/IP model wherre applications like web browsers
+email clients and file sharing tools interact with the network
+
+Acts as a bridge bw user applications and lower network Layers
+
+Supports protocols such as HTTP/ SMTP and doesnt
+Hanldes data formatting so that info is correctly understood by both sender and receiver
+Provides encryption for secure communication
+Manages sessions to track ongoing connections
+
+2) Transport layer- Ensures reliable and efficient delivery of data bw devices, managing segmentation
+orderinng and retransmission as needed 
+
+Breaks large messages into packets and reassembles them at the destination
+TCP checks for the error, resends the lost data and ensures the correct orderinng
+Prevents the receiver from beinng overwhelmed by regulating data flow 
+
+TCP is used when reliability and acccuracy are important. It ensures that the data is delivered exactly as sent 
+
+TCP deteccts errors in the data using checksums to ensure integrity
+If any data is lost or corrupted during trasnmission, TCP automatically resends it 
+
+
+3) Internet layer- Responnsible for addressing, packaging and routing data packets so theyc ccan travel
+across networks and reach the correct destination device. It ensures that the data can move bw diff networks efficiently 
+
+Assigns IP addresses to identify sources and destination devices 
+Determines the best path for data to travel across networks 
+Breaks large packets into  smaller ones for transmission and reassembles them at the destination 
+
+4) Network Access(Link Layer)- 
+Responsible for physically transmitting data over the network hardware including cables switches and wireless'
+conncetions, it hanldes how the data is formatted for the network medium and ensures it reaches the next device on the path 
+
+Sends and receives the raw bits over physical media like Ethernet cables, fiber optics or wifi
+Organises data into frames for proper transmission and recognition by devices 
+Detects transmission errors using checksums or CRC 
+Uses hardware addreses to  identify devices within the same network segment
+
+
+
+
+TSO creates a problem for MPTCP opern 
+breaks areg segments into small packets and send it out 
+when it sends the packets, the tcp options does get coppied into all small small packets 
+why is thiss a problem? 
+
+example- at tcp layer there is packet of 5000 butes, adn its gets broken down into 5000 packet size,
+now for each 5 packet,s the sequenc no=subflow   sequene number, adn in the option, tcp option, there is a ssequence no 
+
+because of tso, the job of tcp egmentaionn has been offloaded to NIC
+
+receiver ccannot reconstruct that packet, because 
+
+tcp gement structre lookss exactly the same 
+tcp no, acknowlegement no, 
+
+NIC does the job of breaking down packet 
+
+so what we do? 
+
+we haeve starting sequnce no, and the length of packet which is 1000, o even if it gets copied, it will not cause problem, that thi subsequenc no is related to what data sequence no 
+
+
+even after doing this change, some of the mptcp connections were not successful   
+
+sequenc no is a random number, this is for security purposes 
+
+some senders still use 0 as starrting sequence, and for them middlebox  is changed  to a random number
+
+that is a problem, because receiver will not be able to reconstruct the packets, 
+
+so to solve thsi problem, rather than telling the exact seq number, you tell the starting and end no, and with that the receiver is able to recreate
+
+the starting no is changed by middlebox, so it will also cause a problem, so thererefore this was done relateive mapping
+
+starting from x and x+2000 , 
+
+NIC doesn understnad MPTCP, middlebox changes the initial sequence no, so  the intitla mapping is no longer useful, so mapping has to be relative and not absolte, so ampping starts at x and ends at y 
+
+
+SYLLABUS  IS TILL QUIC 

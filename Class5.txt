@@ -1,0 +1,401 @@
+Slide 2 
+Video streaming services are popular, massive voluke of platforms like youtube netflix hulu ewtc 
+
+Videos make up to more than 50 percent of traffic in regionns like USA
+
+Despite vast infrastructure and CDN deployments, users tull frequently encounter quality degradation stalls and poor Quality of Experience 
+
+Slide 3 
+
+Rebuffer means a playback interrruption/stall where the screen freezes and dsiplays a loading spinner because the client's buffer ran completely dry 
+
+Unnecessay rebuffers- a stall is classified as unnecessary if the client side ABR algo could have prevented the freeze simply by choosing a lower evideo bitrate/resolution 
+
+20-30 percent of all streaming rebuffers are unnecessary 
+
+They occur not because the network completely failedbut bczo the client side ABR algos were too aggressive, overestimated bandwidth or reacted too slowly to changing network condns 
+
+
+Slide 4- 
+
+Problem 2- the video rate is too low 
+
+Video rate equals the visual quality- the birate directly determines the resolution sharpness and clarity of what the viewer sees 
+
+the too low failure occurs when the client algo selkects a low quality stream even though the user's network connection is fast enough to handle 
+
+The side by side image illustrates the result, a crisp image turns bluirry, pixelated and muddy for no techincal reason 
+
+Slide 5- 
+fundamental trade off that Adaptive Bitrate algo struggle to balance 
+
+Problem 1- being too aggressive 
+The algo overestimates network bandwidth and requests a high bitrate 
+The pipe cannot keep up the buffer empties and the video freezes 
+
+Problem 2- the algo is overly cutious and requests a very low bitrate to guarantee no stalls 
+The buffer stays full, but the user gets a poor bluirry viewing esperience despite having fast internet '
+
+therefore designing an ABR algo is tricky bcoz it must constantly operate in the sweet sspot, maximising the visual quallity without becoming aggressive enough to cause a stall 
+
+Slide 6- How is the video rate pickedd- 
+
+Client drive Logic(Red Box): 
+The rate selection Logic resides on the client device not on the server 
+
+The client checks its Playback buffer and decides which file quality to request next 
+
+Passive CDN- The CDN acts as a dumb file store hosting pre encoded segments at various bitrates 
+
+Request repsonse flow - the client sends a requiiest across the internet 
+The CDN delivers that chunk, which fills the client's playback buffer before being rendered on screen 
+
+Slide 7
+
+How is the video rate picked diagram 
+
+Initial video rate- Playback begins by requesting an initial chunk 
+
+Download and Measure- As the chunk downloads, the client measures the transfer time and calculates the achieved throughput 
+
+Estimated Capacity=chunk size(bits)/download time(seconds)
+
+Pick a rate- Using that throughput estimatye, the algo selects the highest sustainable bitrate that fits within the estimated capacity 
+
+Closed feedback loop- the selected rate becomes the target for the next video cchunk,, and the cycle  repeats continuously for every segment throughout the video 
+
+
+Slide 8 
+Explains why the simple mmeasure past diwnload speed to predict future bandwidth approach breaks down in real world condns 
+
+Extreme fluctuations- the graph plots real world throughput across consecutive chunk downloads during a single video session 
+
+Bandwidth swings rapidly bw peaks of 17MB/s and troughs of 500Kb/s a massive 34x variance 
+
+Zero throughput periods- for roughly 10% of the sessions, thorughput collapses near zero(tempportay dropouts or sever congestion)
+
+Hard tro estimate future capacity becoz network speeds changes wildy within secionnds, what u measyred for chunk N is commpletely wrong for chunk n+1
+
+Slide 9
+1st paper discussed about how commercial players become unstable, made errati9c bitrate choices and frequently suffered avoidable rebuffers because they relied on nosiy throughput estimates 
+
+Paper 2- the doundational paper introducing the BOLA showing that algos should make bitrate decisions based on how full the client buffer is, rather than trying to guess volatioe network capacityy 
+
+Paper 3- Analysed real world CDN streaming performace, showing issues with fiarness when multiple video streams compete in the same link, and laying the groundwork for modern ABR controllers used today 
+
+
+Slide 10-
+Slide shows the soln to noisy network fluctuations replacing the network capacity estimation with buffer monitoring
+
+we can avoid estimating capacity most of the time. tyrying to predict erratic internet speeds directly causes unstable video quality and stalls
+
+during the vast majority of viewing playback runs in steady state where the video has already started and a buffer exiswts 
+
+So the point is to pick a rate as a function of buffer occupancy 
+
+instead of guessing what the network might do next, simply look at how many seconds of video are currentl stored in RAM
+
+Buffer full and growing: safely step up quality 
+
+Buffer draining- step down quality before a freeze happens 
+
+Slide 11-
+
+Slide splits video playback into 2 distinct phases with diff strats 
+
+1) start up phase 
+the buffer is completely empty when the user clicks play 
+
+because there is no buffer history yetm simple thrroughtput estimation is useful here to quickly probe netowrk speed and start playing without an excessive initial delay 
+
+2) steady state phase 
+
+the buffer has built up a safety cushion of video segments 
+
+the state of network is already indirectly reflected in the buffer level. if the network slows down, the buffer nnaturally drains, if the network is fast the bufffer fills up 
+
+therefore the compelx and error prone capacity estimation can be avoided entirely in the favor if monitioring buffer occupancy 
+
+Slide 12-
+Key takeaways from our results 
+
+The slide summarises the experimental findings comparing throughput estimation with buffer based approaches 
+
+Capacity estimation harm in steady state- trying to predict fluctuating network speeds whle video is already playing leads directly to 10-20 percent unneccesary rebiffering events 
+
+Buffer occupancy as the decision metric- 
+in steaddy state, bitrate selection should be driven entirely by buffer fullness 
+
+Buffer occupancy naturally encodes capacity- the buffer level acts as a physical low pass filter, if the network slows down, the buffer depletes, and if the bandwidth is abundant the buffer grows 
+
+Role of capacity estimation- it remains usefful only during the initial startup phase to bootstrap playback and fill the buffer quickly without starting too conservatively 
+
+Slide 13- 
+
+the pipeline elements- client screen: consumes video ffrom the local buffer at real time playcheck speed 
+
+Bufffer box: the reserviour holding downloaded seconds of video 
+
+Network/CDN cloud: ingests new video chunks into the buffer at netowkr capctiy rate C(t)
+
+If downlooad rate>playbakc consumption the buffer grows 
+
+If download rate<playback consumption the buffer drains towards zero 
+
+Slide 14
+
+Horizontal dimensions=Playback time: The client's RAM buffer is divided into discrete time slots, where each slot represents exaclty 1 video second of playback time
+
+Drain rate is cionstant- Because the client plays video at real time speed, the screen consumes exaclty 1 slot per real world second
+
+To store enough 1 second slots so temporary network slows donw from the CDN do not drain the buffer to zero and stall playback 
+
+Slidw 15- 
+
+Each downloaded video second is placed intp its respective buffer slot 
+
+The verrtical bars have different heights, illustrating that not every 1 second chunk contains the same amount of bindary data(due to differencce in visual complexity or chosen quality levels )
+
+Slide 16-
+Vertical height=video rate- the height of each bar represtns the Video Rate chosen for that specific second
+
+Taller bar- high video rate/high video reoltion 
+
+Shorter bar- low video rate/lower resolution
+
+The downloaded time equation
+
+If 1 second slot has a video rate(R bits) and netowkr capacity is C(bits/sec) the time required to download that single second is 
+Download time=r/c 
+
+if r<c the slot downloads in under 1 second-> buffer grows 
+
+if r>c the slot takes longer than 1 second to download, buffer drains 
+
+Slide 17- Bufer dimensions: the horizontal axis tracks playback duration(1 video per second slot) while the vertical height of eacch pink column represents the Video Rate(bitrate) chosen for that segment 
+
+Varying Segment sizes: different quality selections or visual scenes complexities mean each 1 second video slice requires a diff amount of data bits 
+
+Slide 18-
+
+Buffer occupancy indicator- the blacj inverted triangle marks the current playback buffer occupancy(the total buffered video time available ahead of playback cursor)
+
+Buffer cushion: in this snapshot, the client has about 8 contiguous 1 second chunks loaded in RAM, leaving 3 empty slots available befor ereachinnbg the mam buffer limit 
+
+Slide 19- the const drain rate 
+
+Fixed consumption rate: the mdeai player and display drain the bufferat the const rate 
+'
+Output rate= 1second pof video per 1 second of real Time
+
+The buffer balance principle
+
+If download time per segment<1 second: segments arrive fastser than the player consumes them the market moves to the right(buffer builds up)
+
+If download time per segment>1 second: the player consumes chinks faster than the network delivers them-> the marker drifts to the left towards 0(buffer starvatopmm risk)
+
+Slide 20 - 
+
+Output- consumed at a constant speed of 1 sec/sec by the client player 
+
+Input- governed by the function f(Capacity, Video Rate)
+
+The fill fomrula 
+
+Fill rate=Capacity/Video Rate seconds of video per real world second 
+
+if the network provides bits faster than the requested quality requires(C>R) then new video seconds enter the buffer faster than the player consumes them 
+
+
+Slide 21- Video Rate>Capacity Buffer 
+
+The problem- the chosen video bitrate exceeds the availabel network bandwidth 
+
+Mathematical Consequence 
+Fill Rate=C/R<1sec/sec 
+
+System behaviour- the player drains 1 sec every second, but the network delivers less than 1 second of video over the same duration 
+
+Slide 22- 
+
+The chosen Viddeo Bitrate is lower than available network bandwidth, yet the buffer remains near empty 
+
+This happens because chunks are small and download very quickly, the player downloads a chunk wiats and then downloads the next 
+
+Capacity is not fully utilised, the connection spends long idel intervals waiting bw chunk requests rather than continuously straming high quality 
+
+Every time the connection goes idle, TCP closes its congestion window or drops out of high throughput mode, repeatedly forcing TCP back into slow start and producing inaccurate capacity estimates 
+
+
+Slide 23- 
+
+The slide defines the core control logic of purely buffer based rate adaptation 
+
+1) Buffer occupancy decreasing(dBuffer/dt<0)
+Incoming download rate is slower than real time consumption
+The current bitrate is unsustainable-> decrease the video rate 
+
+Buffer occupancy increasing(dBuffer/dt>0)
+Incoming download rate exceeds real time consumption 
+Bandwidth headroom exists-> increase the video rate 
+
+Core Rule: Bitrate selection is  mapped directly as a deterministic mathematical funcn of the current buffer level R=f(Buffer)
+
+Slide 24- 
+The slide outlines the theoretical bounds and guarantees provided by a buffer based controller 
+
+Theorem 1: Avoid unnecessary rebuffers 
+
+When the buffer drops near the critical lower threshold(approaches empty), the empty alogrithm enforces Rmin 
+
+As long as the physicall networkk bandwidth is above the bare minimum(Capacity>Rmin) the fill rate exceeds drain rate and the buffer rate is guaranteed to recover/grow 
+
+Theorem 2: Maximise video rate/bandwidth utilisation
+
+When the buffer fills towards its upper safety threshold, the algorithm steps up towards Rmax
+
+As long as capacity<Rmax, chunks take slightly longer to arrive, preventing buffer overflow while fully utilising availabel network throughput 
+
+Slide 25-
+
+X axis- buffer occupancy- ranges from 0>low>high->full 
+
+Y axis- quanitsed across diff encoding level s ffrom R min upto Rmax
+
+Operating regions: 
+1) Low buffer regions: 
+The cureve pins rate selection to Rmin to prevent stalls and rebuild buffer cushion(Avoid Unneccesary rebuffer)
+
+High buffer region- as the buffer approaches capacity, the curve ramps up to Rmax to deliver top visual quality(Maximise Video Rate)
+
+Intermediate transn curve- the red curves illustrate different mapping profiles(linear,concave or sigmoid). As long as the function is monotonically increasing from Rmin to Rmax, the system converges stable without erratic oscillations 
+
+Slide 26- 
+Shows the standrad piecewide linear mapping used in Buffer Based Adaptation
+
+Low bufffer region(<Low) The curve is flat at Rmin
+If buffer levels drop below the safety threshold, the algorithm locks selection to the lowest possible bitrate to prevent a rebuffer and allow the buffer to recover 
+
+Linear Ramp region(Low->High)
+As buffer occupancy grows past the Low threshold the selected video rate increases linearly in proportion to  buffer fullness 
+
+Discrete dashed blue lines show how contns buffer levels are quatised to pick the closest available chunk bitrate 
+
+High buiffer region- once the bufffer passes the high threshold, the curev caps at Rmax 
+
+The pkayer maximises visual quality since it has an ample buffer cushhion 
+
+
+Slide 27-
+
+Summmatises the full operational strategy across the entire video session 
+
+Startup phase- 
+State- the buffer is nearly empty and rapdily building up 
+
+Strategy- use throughput estimation to ramp up quickkly without introducing unnnecessary intial delay 
+
+Steady state phase-
+State- a stable buffer cushion has been established 
+
+Strategy- ignore volatile throughput measurements entirely and pick the video rate strictly as a function of buffer occupancy using the mapping curve 
+
+Slide 28- 
+
+Large scale prodn experiment cinsucted to validate BBA on real users 
+
+Deployed inside netflix's browser based wbe player across 500000 real users over a weekend in september 2013 
+
+The three test groups 
+
+Group1- netflix existing prodcn ABR algo 
+
+Group 2- An artificial benchmark that streams exclusively at the lowest quality level to establish the theopretical minimum revbuffer rate possible on those connections 
+
+Group 3(BBA)- the new buffer based ratte adaptatin algo 
+
+Slide 29-
+
+Evaluation framework used in the NNetflix prodction experiment- 
+
+X Axis- tracks the 24 hr day acrross global traffic 
+
+Y axis- measures the stall frequency 
+
+Peak hours- highlights evening traffic peaks when coonsumer internet usage is highest and networkk congestion is severe 
+
+Slide 30- 
+
+performance of netlfix's standard throughput based production algo 
+
+Diurnal pattern- rebuffers frop off peak morning hourse and spike sharply during peak evening hours 
+
+High failure rate: during peak congestion, users experience high rebuffer frequencies becaue noisy throughput estimation leads the player to make overly aggressive bitrate choices
+
+Slide 31
+
+Lower bound: represents the streams locked permanently to the lowest possible resolution(Rmin)
+
+it matters bcoz the Rmin consumes minimal bandwidth, this curve represents the absolute minm rebuffer rate achievabel on real user connections 
+
+
+Slide 32
+
+Slide normalises the rebuffer rate to make the comparison clear 
+
+Normalised metric: the control algo is fixed at 100% across all 24 hours as the baseline 
+
+the elimination target(lower bound in blue)
+
+The blue line sits at roughly 70-80 percent 
+
+Key finding-20-20% of rebuffers can be eliminated. the gap bw the 100% control line and the 70-80% baseline represents stalls that were entiirely avoidable 
+
+Slide 33-
+
+tells the experimanetal results of BBA
+
+BBA results- across almost the entire day, especially during peak traffuic hours, BBA tracks much closer to the theoretical lower bound 
+
+By ignoring erratic throughput spikes and making decisions strictly based on buffer fullness, BBA successfully prevented most unnecessary stalls in productionn
+
+Slide 34-
+
+compariosn for Visual quality(bitrate) during the steady state phase 
+
+Y axis metric Video Rate diff: it measures whether the BBA sacrifices visual quality to achieve fewer stalls 
+
+Exclusion criteria- exclusing the first 120 seconds ensures the comparison only evalutaes the steady state performance after the startup phase has completed 
+
+x axis: 24 hour timeline in GMT with yellow highlghted peak congestion periods 
+
+Slide 35
+
+measures the Video Rate diff relative to Netflix's default production algo during the steady state phase 
+
+Control baseline: Netflix's default throughput based algo is centered at 0kb/diff across all 24 hours to server as the comparative benchmarkk 
+
+Slide 36
+
+BBA results- the bba consistenyly stays above the zero line across almost all hours of ther day particulary during peak congested hours
+
+BBA did not achieve fewere rebuffers by playing overky conservative low quality videos 
+
+Instead BBA achieved higher steady state video bitrates while simultaneoudly cuttrtingg rebuffering stalls by 10-20%
+
+Slide 37
+
+Network capacity is volatile: real world bandwidth fluctuates widely, making ddirect throughput estimation inherently noisy and unreliabel 
+
+2 phase arch-
+
+start up- use simply capacity estimation to ramp up video quality quickly when the buffer is empoty
+
+steady stste- avoid capacity estimation completely once the stream is established 
+
+Buffer level naturally filters the network noise and directly reflects sustained link capacity 
+
+Benefits-
+1) avoids unneccary rebuffers by prevemting aggressive overhsooots whenn thoroughput temporaroilyy drops 
+
+Maximises the video rates bu conntinuoyslyty using availabel bufffer headroom to susyteain higher quality 
