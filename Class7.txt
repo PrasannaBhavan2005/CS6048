@@ -1,0 +1,106 @@
+. The WebRTC Paradigm & Sequential Four-Step Pipeline
+WebRTC provides an open standard and JavaScript APIs for sub-second, encrypted, peer-to-peer real-time communication directly between browsers without plugins. The connection lifecycle follows a strict sequential four-step pipeline:  
+PDF
++ 1
+
+Signaling: Out-of-band exchange of Session Description Protocol (SDP) text to bootstrap media configurations and network details.  
+PDF
+
+Connecting: NAT traversal and route discovery using ICE, STUN, and TURN.  
+PDF
+
+Securing: DTLS handshake for identity verification and SRTP key derivation.  
+PDF
+
+Communicating: Bi-directional transport of media (RTP/RTCP via SRTP) and data (SCTP via DTLS).  
+PDF
+
+2. Core Protocol Stack & Subsystems
+
++-------------------------------------------------------------+
+|                        WebRTC Agent                         |
++------------------------------+------------------------------+
+|       Data Communication     |     Media Communication      |
+|    SCTP (DCEP / User Data)   |    RTP (Audio/Video) + RTCP  |
++------------------------------+------------------------------+
+|            DTLS              |             SRTP             |
++------------------------------+------------------------------+
+|                             ICE                             |
+|                    (STUN / TURN Protocols)                  |
++-------------------------------------------------------------+
+|                             UDP                             |
++-------------------------------------------------------------+
+  
+PDF
+
+Signaling (SDP & JSEP): WebRTC agents trade SDP key-value parameters via an Offer/Answer model. Critical SDP fields include media definitions (m=), DTLS setup roles (a=setup:), crypto certificate hashes (a=fingerprint:sha-256), ICE credentials (ice-ufrag, ice-pwd), and ICE candidate IP endpoints (a=candidate:).  
+PDF
++ 1
+
+Connecting & NAT Traversal (ICE, STUN, TURN):
+
+NAT Behaviors: Classifies mapping creation and filtering behaviors across Endpoint-Independent, Address-Dependent, and Address/Port-Dependent (Symmetric) rules.  
+PDF
+
+STUN (RFC 8489): Sends a Binding Request to discover external NAT mapping (XOR-MAPPED-ADDRESS).  
+PDF
+
+TURN (RFC 8656): Provides relayed transport addresses via fallback relay servers when symmetric NAT or firewall policies block direct peer-to-peer traffic.  
+PDF
+
+ICE Candidate Types: Gathers Host (local interface), mDNS (obscured UUID for LAN privacy), Server Reflexive (STUN public address), Peer Reflexive (inferred from connectivity checks), and Relay (TURN allocation). Pairs them, conducts STUN connectivity ping checks, and nominates the winning candidate pair.  
+PDF
++ 1
+
+Securing (DTLS & SRTP):
+
+Performs a DTLS handshake over the active ICE candidate pair. The certificate presented in the handshake must match the fingerprint hash exchanged in the SDP.  
+PDF
++ 1
+
+Generates master cryptographic secrets, from which SRTP keys are derived (via RFC 5705) to encrypt media streams without requiring a separate SRTP handshake.  
+PDF
+
+Media Communication (RTP & RTCP):
+
+RTP (RFC 3550): Transmits lossy, compressed audio/video frames packetized with 16-bit Sequence Numbers, Timestamps, and SSRCs.  
+PDF
+
+RTCP Feedback & Control: Provides call quality telemetry and error recovery via NACK (retransmit specific missing packet), PLI / FIR (request a complete I-frame/keyframe when decoding is broken), and Sender/Receiver Reports (SR/RR for round-trip propagation time and jitter tracking).  
+PDF
+
+Bandwidth Estimation (BWE) & Congestion Control: Evolved from Receiver Reports to REMB (Receiver Estimated Maximum Bitrate) and modern TWCC (Transport-Wide Congestion Control) paired with GCC (Google Congestion Control). TWCC reports exact arrival timestamps back to the sender, allowing the sender-side Kalman filter to detect subtle queue depth increases before packet loss occurs.  
+PDF
++ 1
+
+Data Communication (SCTP & DCEP):
+
+DCEP (RFC 8832): Negotiates channel properties using DATA_CHANNEL_OPEN and DATA_CHANNEL_ACK.  
+PDF
+
+Configurable Reliability: Supports up to 65,534 multiplexed streams. Developers can configure channels to be fully reliable (TCP-like) or partially reliable (time-bounded / retransmission-limited) and unordered (UDP-like) to eliminate head-of-line blocking for ultra-low latency scenarios (e.g., gaming, teleoperation, and remote desktop).  
+PDF
++ 1
+
+3. Topology Architectures & Diagnostics
+
+Topologies:
+
+1:1 Direct Mesh: Standard point-to-point connection between two agents.  
+PDF
+
+Full Mesh: Every peer connects directly to every other peer; bandwidth and encoding overhead scale poorly (O(N 
+2
+ )).  
+PDF
+
+SFU (Selective Forwarding Unit): Central routing server where each peer uploads a single stream, and the SFU selectively forwards packets to other participants without re-encoding.  
+PDF
+
+MCU (Multipoint Conferencing Unit): Server that decodes, composites, and re-encodes multiple video feeds into a single unified stream for each participant.  
+PDF
+
+Debugging Tools: Built-in browser dashboards (chrome://webrtc-internals, about:webrtc), packet captures with tcpdump and Wireshark, command-line STUN testing using netcat, and the HTMLVideoElement.requestVideoFrameCallback() API for precise client-side video latency profiling.  
+PDF
+
+Would you like to explore how WebRTC's congestion control (GCC/TWCC) compares mathematically with the DASH ABR algorithms (BBA/BOLA) discussed earlier?

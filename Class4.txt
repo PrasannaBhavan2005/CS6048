@@ -1,0 +1,142 @@
+DASH is the standardised streaming protocol desgined to adjust video quality in real time over stadnarad HTTP connections 
+
+Slide 2
+
+MPEG DASH is an HTTP based adaptive streaming protocl used for both live streaming and Video On Demand 
+
+Major streaming platforms like Netflix, Hulu and Youtube rely on it 
+
+the video shows that at low internet  from 0 to 10, the playvback starts quickly on a slow connection using the lowest bitrate chunk 
+10 to 30 as metwork speed improves ythe player steps up to the medium quality 
+30 to 50 high speed coonnectivity allows the player to stream high definition chunks 
+then 550 to 1 the throguhput ddrops so the player runs smoothly back to 360 o chunks to prevcent the video from stalling or buffering 
+
+Slide 3 
+
+HTTP Server- The manifest XML files that acts as a catlog, mapping out chunk durations, available reoltuions, bitrates and their direct URLs
+Media segments- the actuial sliced video/audio chunks stored at different encoding quality levels 
+
+DASH Client- MPD Parser: Downloads and reads the manifest file to discover all available video qualitites and chunk addresses
+
+Control Heuristics- The client side decision engine. It evaluates the download speeds annd device buffer levels to decide which quality level to request next 
+
+HTTP Client sends the standard HTTP GET requests across the network to download the selected video chunks. 
+
+Segment parser- decodes the downloaded chunks and renders continuous synnchronised audio and video on the screen
+
+Slide 4-
+
+FFmpeg is the industry standard, open source command line framework used for transcoding, encoding, multiplexing and formmatting  audio/video files 
+
+Before generating thre DASH chunks, the master input video must be transcoded into multiple discrete quality targets called renditions
+Low rendition- 240p(for slow mobile or weak connections)
+Medium rendition- 480p(standard definition for average bandwidth)
+High rendtiion- 1080p(full HD for fast broadband wifi)
+
+Slide 5-
+command 1- overwritess the output files without asking(-y) using that as  the input(-i)
+
+cv libx2644 use the H264 video codec 
+-r 24 set the frame rate to 24  fps 
+
+1080p command sets the scale height to 2:1080 with a target video bitrate of -b:v 4300k 4.3 mbps 
+
+480p sets scale height to -2:480 with a target video bitrate of 1.05 mbps 
+
+240p sets the scale height to -2:240 with a target video bitrate of 235 kbps 
+
+Slide 6- 
+-c v libx264 selects the H264 oopen source video encoder 
+
+-r 24 sets the frame rate to 24 frames per second to match the source video 
+
+-x264.. forces an I frame(keyframe) exactly every 48 frames(every 2 secinds at 24 fps) and disabkes automatic keyframes at scene changes 
+
+In Dash video is sliced into standalone segments. every chunk muist start with a keyframe at the exact same timestamp across all resoltuions so the player can switch bitrates seamlessly without gllitching
+
+-vf:scale resizes the video height to 1080 pixels. the -2 flag automatically calculayes the width while keeping the aspect ratio and ensuring the dimension is divisible by 2 
+
+-b v specifies the target average video bitrate 
+
+-maxrate
+Enforces a ceiling on bitrate spikes so the stream never exceeds 4.3 mbps preventing unexpected network byffer underruns 
+
+Setting buffsize to twice maxrate allows a 2 second buffer window to absor temporary complexity in high action scennes 
+
+Slide 7-
+
+preset fastr controls the trade off between encoding speed and compression efficiency 
+
+Slower presets yield shigher compression at the cost of londer CPU encoding times 
+
+-profile v main 
+Selects the H264 main profile, ensuring the broad hardware decoding compatibility across older smartphones, smart TVs and web browsers
+
+-an 
+Strips the audio tracks from the outpt video files 
+
+In DASH, audio and video are typically encoded and transmitted as separate streams so the client can switcch video resolutions without restarting ot desynchronising audio. 
+
+Slide 8 
+Once FFmpeg generates the individual video files, MP4Box from the GPAC multimedia framework slices them into physical chunks and creates the master mpd playlist file 
+
+dash 4000- slices each video file into segments lasting 4000 ms 
+
+-rap forces every segment boundary to align strictly with keyframes so the media player can start playback or swithc bitrates instantly from any chunk 
+
+-segment name- sets the naming template for the generated chunk files 
+
+-fps 24 declares 24 frames per second to ensure audio/video timing sync 
+
+video id=480p tags the rendition stream with a readable identifier used bby the player's qualoity selecttore menu 
+
+Sllide 9- 
+this slide provides a minimal HTML page that embeds an open source web playyer to stream the packaged DASH content inside a standard browser 
+
+Loads the official reference dash.js Js client library into the browser 
+
+Debug script block- configures the dashkjs media player to output real time debig logging and performance metrics in the browser's developer console 
+
+dash dashjs player is an attribute read by dash.js to automatically attach adaptive streamming logic to the standard HTML5 video element 
+
+
+Slide 10- 
+The slide covers how to deploy the generated DASH fikes onto a live web server for streaming 
+
+File requirements-
+. the Dash folder containing the .mpd manifest file and all generated video chunk files 
+
+the index.html file(the webpage embedding the dash.js player)
+
+Deployment path- Copy both into Apache's default web root directory 
+If Apache already has a default index.html placeholder file replace or rename it with a custom index.html 
+
+Testingg playbvack- open a web browser an dnavigate  to load the player and start streaming
+
+Slide 11
+
+explains how to simulate fluctuating network conditions in google chrom to  obserrve DASH adapting in real time 
+
+
+as the bandwidth is throttled down dash.js deteccts the slowdown aytomatically request lower resoliuitio chunks to keep playing without freezing 
+Removing the thhrottling causes the player to steo back up to high quality 
+
+Slide 12- 
+
+This slide focuses on measuring the streaming performance and customising the client's decision making algorithm 
+
+QoE metrics to measure
+1) Streaming quality and bitrate currently playing 
+
+number of quality switches: how frequently the player flips bw resolutions 
+
+Customising the ABR Algorithm 
+
+in the dash.js source code different ABR logic can be tested 
+
+Throuhgput based: chooses the quality soolely based on estimated network download speeds '
+
+Buffer based: chooses quality based primarily on current bufffer fullness in memory 
+
+Hybrid ABR: combines both througput estimation and buffer occipancy to optimise QoE 
+

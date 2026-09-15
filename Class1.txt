@@ -83,42 +83,6 @@ Uses hardware addreses to  identify devices within the same network segment
 
 
 
-TSO creates a problem for MPTCP opern 
-breaks areg segments into small packets and send it out 
-when it sends the packets, the tcp options does get coppied into all small small packets 
-why is thiss a problem? 
-
-example- at tcp layer there is packet of 5000 butes, adn its gets broken down into 5000 packet size,
-now for each 5 packet,s the sequenc no=subflow   sequene number, adn in the option, tcp option, there is a ssequence no 
-
-because of tso, the job of tcp egmentaionn has been offloaded to NIC
-
-receiver ccannot reconstruct that packet, because 
-
-tcp gement structre lookss exactly the same 
-tcp no, acknowlegement no, 
-
-NIC does the job of breaking down packet 
-
-so what we do? 
-
-we haeve starting sequnce no, and the length of packet which is 1000, o even if it gets copied, it will not cause problem, that thi subsequenc no is related to what data sequence no 
-
-
-even after doing this change, some of the mptcp connections were not successful   
-
-sequenc no is a random number, this is for security purposes 
-
-some senders still use 0 as starrting sequence, and for them middlebox  is changed  to a random number
-
-that is a problem, because receiver will not be able to reconstruct the packets, 
-
-so to solve thsi problem, rather than telling the exact seq number, you tell the starting and end no, and with that the receiver is able to recreate
-
-the starting no is changed by middlebox, so it will also cause a problem, so thererefore this was done relateive mapping
-
-starting from x and x+2000 , 
-
 NIC doesn understnad MPTCP, middlebox changes the initial sequence no, so  the intitla mapping is no longer useful, so mapping has to be relative and not absolte, so ampping starts at x and ends at y 
 
 

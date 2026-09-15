@@ -1,0 +1,64 @@
+BBR: Congestion-Based Congestion Control (Google Research)
+
+1. The Flaw of Loss-Based Congestion Control
+* The Obsolete Heuristic: Traditional protocols (Reno, CUBIC) treat packet loss as a synonym for congestion. This worked on 1980s infrastructure with shallow router buffers, but modern multi-gigabit networks break this relationship.
+* The Dual Failure Modes:
+  - Bufferbloat (Deep Buffers): Loss-based TCP drives queues until the bottleneck buffer overflows, keeping buffers persistently full and creating delays of seconds.
+  - Throughput Collapse (Shallow Buffers / Wireless): On links with random wireless drops or shallow switch buffers, loss-based TCP cuts its congestion window unnecessarily, severely under-utilizing bandwidth.
+* Kleinrock's Optimal Point: Transport performance is maximized when inflight data equals the Bandwidth-Delay Product (BDP = BtlBw * RTprop). At this point, throughput equals line capacity and queuing delay is near zero. Loss-based algorithms operate far to the right at BDP + BtlneckBufSize.
+
+2. Characterizing the Bottleneck & The Uncertainty Principle
+A path's physics are dictated by two independent parameters:
+* RTprop (Round-Trip Propagation Time): The physical latency of the path without queuing noise, estimated by a running minimum filter over a window WR (10 seconds to minutes):
+  RTprop_hat = min(RTT_t) over t in [T - WR, T]
+* BtlBw (Bottleneck Bandwidth): The capacity of the slowest link, estimated via a windowed-max filter of delivery rates over WB (6 to 10 RTTs):
+  BtlBw_hat = max(deliveryRate_t) over t in [T - WB, T]
+* The Measurement Uncertainty Principle: RTprop is observable only when the queue is empty (left of BDP), whereas BtlBw is observable only when the link is saturated (right of BDP). Because both cannot be measured simultaneously, BBR alternates between probing bandwidth and probing delay sequentially.
+
+3. State Machine & Pacing Architecture
+
+                 +--------------------------------+
+                 |            STARTUP             |
+                 |  (Exponential rate doubling)   |
+                 +---------------+----------------+
+                                 | Plateau in BtlBw
+                                 v
+                 +--------------------------------+
+                 |             DRAIN              |
+                 |     (Drain startup queue)      |
+                 +---------------+----------------+
+                                 | Inflight == BDP
+                                 v
+   +------------------------------------------------------------+
+   |                                                            |
+   |            +--------------------------------+              |
+   |            |            ProbeBW             |              |
+   |            |  (8-phase pacing gain cycling) | <--------+   |
+   |            +---------------+----------------+          |   |
+   |                            |                           |   |
+   |                            | RTprop stale (> 10s)      |   |
+   |                            v                           |   |
+   |            +--------------------------------+          |   |
+   |            |            ProbeRTT            |          |   |
+   |            |   (cwnd = 4 pkts for 200 ms)   | ---------+   |
+   |            +--------------------------------+              |
+   |                                                            |
+   +------------------------------------------------------------+
+
+* Startup: Doubles sending rate exponentially each round using a pacing gain of 2 / ln(2) ~ 2.89 until delivery rate gains flatten below 25% for 3 consecutive rounds.
+* Drain: Reverses the gain to ln(2) / 2 ~ 0.35 to clear the excess startup queue until inflight data matches the estimated BDP.
+* ProbeBW (Steady State): BBR spends ~98% of its operating time here, cycling an 8-phase gain sequence: [1.25, 0.75, 1.0, 1.0, 1.0, 1.0, 1.0, 1.0].
+  - 1.25x: Probes for higher bandwidth for one RTT.
+  - 0.75x: Drains the temporary queue created during probing for one RTT.
+  - 1.0x: Cruising phase for 6 RTTs with an empty bottleneck queue.
+* ProbeRTT: If no new minimum RTT is observed for 10 seconds, BBR drops cwnd to 4 packets for at least 200 ms to drain standing queues and measure the true baseline RTprop.
+* Packet Pacing Engine: Every packet departure is paced at:
+  Pacing Rate = pacing_gain * BtlBw_hat
+  The window is bounded by:
+  cwnd = cwnd_gain * BDP
+
+4. Experimental & Production Deployment Results
+* Google B4 WAN: Replacing CUBIC on Google's inter-datacenter backbone improved throughput by 2x to 25x, and up to 133x on transatlantic links with large socket buffers.
+* Random Loss Resilience: While CUBIC throughput drops 10x at 0.1% loss and stalls above 1%, BBR delivers full link capacity up to 5% random loss and remains competitive up to 15%.
+* YouTube Edge Servers: Reduced global median latency by 53% (and by > 80% in developing regions) by eliminating bufferbloat.
+* Mobile / 2.5G Networks: Maintained flat, minimal latency across 2.5G SGSN buffers, preventing connection-setup SYN timeouts that fail under loss-based TCP.

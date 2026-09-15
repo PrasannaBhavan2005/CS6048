@@ -1,0 +1,58 @@
+The core concepts, mathematical principles, implementation details, and evaluation results from the paper "CUBIC: A New TCP-Friendly High-Speed TCP Variant" (Sangtae Ha, Injong Rhee, Lisong Xu) are organized below:
+
+1. The Problem with Standard TCP on High-BDP Networks
+* Sluggish Recovery in Large BDP: Standard TCP (Reno, NewReno, SACK) increases its congestion window (cwnd) by only 1 packet per RTT (AIMD(1, 0.5)). On fast, long-distance networks with a large Bandwidth-Delay Product (BDP), recovery takes an impractical amount of time.
+* The 10 Gbps Example: Over a 10 Gbps link with a 100 ms RTT and 1250-byte packets, the BDP is ~100,000 packets. If a single packet loss cuts the window to 50,000, Standard TCP takes 50,000 RTTs (~5,000 seconds or 1.4 hours) to recover full link capacity, leading to severe network underutilization.
+
+2. Predecessor: BIC-TCP & Why CUBIC Was Created
+* BIC-TCP Mechanism: BIC-TCP used a binary search between the minimum window (post-loss) and maximum window Wmax (pre-loss), followed by additive increase and "max probing".
+* BIC-TCP Limitations: Its multi-phase growth function was complex to analyze and implement, and its growth remained aggressive over short RTTs.
+* The CUBIC Breakthrough: CUBIC replaces the piecewise linear/logarithmic/exponential functions of BIC-TCP with a single continuous cubic function.
+* Real-Time Window Growth: Crucially, CUBIC computes window growth as a function of the elapsed real time (t) since the last loss event, making growth independent of RTT. This achieves superior RTT fairness.
+
+3. The CUBIC Mathematical Model
+
+A. The Window Growth Function
+The congestion window W(t) at elapsed time t since the last loss event is given by:
+W(t) = C * (t - K)^3 + Wmax
+
+* C: A scaling factor set to 0.4 to balance TCP-friendliness and scalability.
+* Wmax: The window size right before the last congestion event.
+* K: The time required to scale the window from the post-drop level back to Wmax, calculated as:
+  K = ((Wmax * beta) / C)^(1/3)
+  (where beta = 0.2 is the multiplicative decrease factor, meaning the window drops to Wmax * (1 - beta) = 0.8 * Wmax on packet loss).
+
+B. The Three Operating Regions
+1. TCP-Friendly Region: Standard TCP performs well under short RTTs. CUBIC calculates the theoretical window of Standard TCP as a function of real time:
+   Wtcp(t) = Wmax * (1 - beta) + 3 * (beta / (2 - beta)) * (t / RTT)
+   If W(t) < Wtcp(t), CUBIC matches Standard TCP's growth rate to remain strictly TCP-friendly.
+2. Concave Region (t < K, cwnd < Wmax): The window accelerates quickly when far from Wmax, then flattens out to form a plateau as it approaches the previous saturation point Wmax.
+3. Convex Region / Max Probing (t > K, cwnd > Wmax): If no packet loss occurs after reaching the plateau, CUBIC infers that available capacity has grown and transitions to convex growth, slowly probing for a new maximum before accelerating exponentially.
+
+Congestion
+Window (cwnd)
+     ^
+     |                                              ..'' (Convex: Max Probing)
+Wmax |-----------------------------............'''''
+     |                      ..'''''  (Plateau @ Wmax)
+     |               ..''''' 
+     |         ..'''' (Concave Growth)
+     |    ..'''
+0.8W |---|
+     |    | <----------- K -----------> |
+     +----+-----------------------------+------------------------> Real Time (t)
+         Loss Event
+
+4. Key Algorithmic Enhancements
+* Fast Convergence: When background flows join, existing flows must release bandwidth. If a loss occurs before reaching the prior saturation point (Wmax < Wlast_max), CUBIC reduces Wmax further:
+  Wlast_max = Wmax * ((2 - beta) / 2)
+  This forces the plateau to happen sooner and frees up link headroom for newer flows to catch up.
+* Newton-Raphson Cubic Root Optimization: In the Linux kernel, integer arithmetic is required because floating-point operations are disabled. Transitioning from a bisection method to the Newton-Raphson approximation improved execution performance by over 10x (from 1032 clock cycles down to 79 clock cycles).
+* Removal of Window Clamping: Early versions clamped the maximum window increase to Smax = 32 packets/RTT. Extensive testing confirmed that CUBIC's natural cubic curvature is stable enough to safely remove clamping in both concave and convex regions (introduced in CUBIC 2.1 / 2.2).
+
+5. Performance & Experimental Results
+* Intra-Protocol Fairness: Two competing CUBIC flows on the same bottleneck converge rapidly to a 50/50 fair share within 200 seconds across a wide range of RTTs (16 ms to 324 ms).
+* Inter-RTT Fairness: Because CUBIC's window growth depends on wall-clock time rather than RTT increments, long-RTT flows are not starved by short-RTT flows. It achieves a significantly better bandwidth ratio than BIC-TCP and HSTCP.
+* TCP-Friendliness: 
+  * Over short RTT paths (8-10 ms), CUBIC seamlessly switches to its TCP mode and shares bandwidth evenly with TCP-SACK.
+  * Over long RTT paths (82-100 ms), CUBIC scales up to claim underutilized bandwidth while leaving existing TCP traffic unharmed.

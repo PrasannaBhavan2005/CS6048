@@ -1,0 +1,191 @@
+
+Slide 2- Web RTC is Web Real Time commncn, it is an open framework desgined for direct sub second bidirectional streaming between web browsers without external plugins 
+
+it eliminates the 3rd party plugins like Flash or desktop software to enable low latency peer to peer audio, video, and data commncn directly inside modern browsers 
+
+3 primary browser appis 
+
+MdeiaStream- captures hardware camera and microphone streams directly from the user's device 
+
+RTCPeerConnection- Manages the entire audio/video connection lifecycle including codec negotiation, encryption, packet loss handling and peer to peer network streaming 
+
+RTCDataChannel- transmits arbitrary bidirectional binary/text data with low latency(similar to WebSockets, but peer to peer using SCTP)
+
+Slide 3-
+
+explains the high level stops two devoces A and B take to establish a dorect connection 
+
+1) Client A commnicates doirectly with Client B over a peer to peer link rather than passing media through a central server 
+
+2) Both devices discover all possible ways the public internet can reach them 
+
+3) A and B use a signallling channel to swao sesion description 
+
+4) Once the network paths and capabilities are agreed upon, A and B establish a direct encrypted connection and begin streaming media to each other 
+
+Slide 4
+
+Media Stream object structure 
+1) Acts as a container holding synchronised tracks:  Video and Audio 
+
+These local hardware streams can be routedd simultaneously to a local element for preview and to an RTCPeerConnection 
+
+JavaScript workflow- constraints: defines minimum resolution requirements and enables the microphone 
+
+navigator requests the hardware permissipn from the user and passes the resulting stream to callback functions'
+
+Slide 5 
+
+Problem- Devices on home or mobile networks use private IP addresses behind a router NAT, making them invisible to external peers on the publci Internet 
+
+STUN functiinality- 
+Peer- A queries a lightwt STUN server on the publci internet asking who am i 
+
+The STUN server inspects incoming UDP packets and replies with Peer A's public IP and external NAT port 
+
+Limitation- STUN works for standard NAT types but fails if a router uses symmetric NAT(requiring a relay server like TURN)
+
+
+Slide 6- 
+
+How Symmetric NAT operates 
+
+It maps an internal private IP/port to a unique different public port for every distinct destination IP/port contacted 
+
+When a client talks to Server 1, NAT assigns public port X. When the cliennt attempts to talk to Server 2, the router assigns a completely diff public port y
+
+Why STUN fails with Symmetric NAT
+
+The publci port discovered via the STUN server cannot be reused by peer B to send packets back 
+The router strictyl drops incoming packets from any IP/port that the internal client has not previously sent outbound traffic to directly
+
+This behavious necessilates fallbackl to a TURN server to realy all traffic 
+
+Slide 7-
+
+ICE is a framework WebRTC uses to systematically discover test and select the best network route between two peers across fireqalls and NAT's 
+
+ICE candidates: 
+An ICE candiate is a possible network address pair(IP,port,protocol such as UDP/TCP) where a peer can receive traffic 
+
+ICE gathers three main candidat etypes:
+
+Host Candidates: Local network inteface IP 
+
+Server reflexiver candidates- public IP and port allocated on the external NAT router 
+
+Relayed candidates- public relay server endpoint used if symmetric NAT blocks direct commncn 
+
+Candidate exchange- All dicovered candidates are bundled and sent to the remote peer via signalling inside the Session Description protocol
+
+Slide 8 
+
+Intent notification: Letting the other device know someone wants to call it so it starts listening for incoming packets 
+
+identifying and relayingh potential routing paths between both endpoints 
+
+Exchanging details about video/audio codecs, encoding resolutions and ebbcryption keys 
+
+
+Protocol Division of Labor:
+
+ICE protocol: Handles connectivity checks and routing oath validation directly between clients 
+
+Signalling:WebRTC does not define a signalling protocol, the application developer must provide a separate communiccation channel to pass initla setup messages between peers 
+
+Slide 9
+
+SDP is a standard plain text format used to describe peer capabilities and session parammeters before media starts streaming 
+
+SDP transmits Medai types like audo,video or data channels 
+
+Slide 10-
+
+Seession Description Potocol defines a tet based format to communicate metadata and media capabilities bw two peers before an active connection starts 
+
+Covers supported media tracks codec configurrations,, bitrates, transpoort optiosn, encryption keys and ICE network candiadtes 
+
+SDP breakdownn- 
+specifies an audio media track suing secure profile with payload type identifier 111
+
+encodes a local host ICE network candidate(IP and port) 
+
+Identifies payload 111 as Opus codec running at 48 KhZ across 2 channels 
+
+Codec specific formatiing parameters 
+
+
+Slide 11 
+
+Role of signalling channel- webRTC does not specify an in band signalling protocol. A centralised Signalling server/channel is required to let peers discover each other and coordinte session setup 
+
+Offer- the intiating peer sends its capabilites and supported confgis across the signalling server 
+
+Answer: The receiving peer accepts or adjust the terms and replies with its own compatible media profile through the same signaling link. 
+
+Gateway role- The signlaing server can also interface with exostong telecommunication protocols to ring or alert the destination device 
+
+Slide 12- 
+
+Inttiator-
+1) registers local media streams with RTCPeerConnection 
+
+2) generates an SDP offer via createOffer
+
+3) sets this offer as its own config via setlocal desription 
+
+4) transmits the offer across the signalling channle to the recever 
+
+
+Receiver steps 
+1) receives the opffer and applies it vioa setremotedescription
+
+2) regoisters its own media streams and generates and SDP answer via createanswer 
+
+3)  sets this answer locally vias setlocaldescription 
+
+4) transmits the answer back over the signalling channel 
+
+Initiator finalises- the green peer applies the returned answer vis 
+
+Outcomme0 bith peers have matched configs, enabling direct peer to peer audio/video astreaming 
+
+Slide 13 
+
+Core responsibility- The primary interface that coordinates the full lifecycle of a WebRTC connection bw two endpoints
+
+Internal components managed
+
+1) Local streams ingests audio/video tracks from the local device hardware 
+
+2) ICE Agent- Communicate with external STUN  and TURN servers to gather network candidates, perform connectivity checks and establish NAT traversal routes 
+
+3) Remote streams- Decodes incomign media packets received from the remote peer and renders them to the application UI. 
+
+Unified interface: Encapsulates offer/answer creation,SDP handling, session state tracking, bandwidth managemenet and connection metrics into a single API 
+
+Slide 14- 
+RTC Data Channel 
+
+Enables low latency, bidirectional transmission of arbitrary text or binary data direectly between peers without routing throuhgh an application server 
+
+While RTCPeerConnectiion handles audio/video over SRTP RTCDataChannel handles non media applicatiion payloads over SCTP (STream control transmission protocol)
+
+Common use cases 
+
+1) Real time text messaging and i game chat 
+2) peer to peer file sharing and direct data transfers 
+3) multiplayer game state synchronisation and telemetry updates 
+
+
+Slide 15
+
+Diagnostic tooliong: In google chrome, navigating to chrom exposes real time devugging telemetry and logs ffor every active webrtc session on the browser 
+
+Connection and ICE states: Active peer connections, gathered ICE candidates and current connection statuses
+
+SDP exchanges: full logs of local and remote Offer/Answer SDP egotiations 
+
+Media tracks: Audio/video streams bitrates, frame rates and codec params 
+
+

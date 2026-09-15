@@ -1,0 +1,70 @@
+
+
+TSO creates a problem for MPTCP opern 
+breaks areg segments into small packets and send it out 
+when it sends the packets, the tcp options does get coppied into all small small packets 
+why is thiss a problem? 
+
+example- at tcp layer there is packet of 5000 butes, adn its gets broken down into 5000 packet size,
+now for each 5 packet,s the sequenc no=subflow   sequene number, adn in the option, tcp option, there is a ssequence no 
+
+because of tso, the job of tcp egmentaionn has been offloaded to NIC
+
+receiver ccannot reconstruct that packet, because 
+
+tcp gement structre lookss exactly the same 
+tcp no, acknowlegement no, 
+
+NIC does the job of breaking down packet 
+
+so what we do? 
+
+we haeve starting sequnce no, and the length of packet which is 1000, o even if it gets copied, it will not cause problem, that thi subsequenc no is related to what data sequence no 
+
+
+even after doing this change, some of the mptcp connections were not successful   
+
+sequenc no is a random number, this is for security purposes 
+
+some senders still use 0 as starrting sequence, and for them middlebox  is changed  to a random number
+
+that is a problem, because receiver will not be able to reconstruct the packets, 
+
+so to solve thsi problem, rather than telling the exact seq number, you tell the starting and end no, and with that the receiver is able to recreate
+
+the starting no is changed by middlebox, so it will also cause a problem, so thererefore this was done relateive mapping
+
+starting from x and x+2000 , 
+
+
+
+MPTCP Congestion Control
+
+what if we use TCP Congestio control mech for each of the subflows?
+If we keep 2 subgflows independetn, they are like indiv tcp connections, for eacch RTT, we increase the congestoinby 1 mss, so if we kwwp runninng it for long we know each subflow woll get b/n  N is the total no of subflows 
+
+A multipath TCP flow with 2 subflows 
+
+GGoal-
+1) should be fair to regulate TCP
+2) it should be atleast as efficient as regulator TCP 
+
+
+for each loss we decrease window wr by w total by  2 
+
+EPTCP is comparison between EPTCP and MPTCP 
+
+
+
+MPTCP Scheduler 
+
+It decides which subflow should send the next data packet 
+How to distribute data across availabel paths 
+Whether to prefer a faster less congested or lower latency path 
+
+Compute over fast path and slow path, the 
+
+fast path 10ms 1000mbps 
+slow path 100ms 1mbps 
+
+Are we utilising both the paths together ot not 

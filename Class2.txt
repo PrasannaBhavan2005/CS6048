@@ -173,8 +173,7 @@ location header and your browser automatically redirects there.
 505 HTTP version not supported- server does not support this HTTP version used in client's request message 
 
 
-Slide 12-13:  Since HTTP is fundamentally stateless, websites use cookies to give users a persistent 
-identity across mulltiple request
+Slide 12-13:  Since HTTP is fundamentally stateless, websites use cookies to give users a persistent identity across mulltiple request
 
 4 Core components-
 1) Set-cookie: header in HTTP response, the server sends a unique id down to the browser 
@@ -510,7 +509,7 @@ Each stream gets independent reliable delivery (so errors stay isolated).
 
 All streams share a common congestion controller across the connection.
 
-Slide 2: QUIC Connection Establishment ($2\text{ RTT}$ vs. $1\text{ RTT}$)
+Slide 37: QUIC Connection Establishment ($2\text{ RTT}$ vs. $1\text{ RTT}$)
 
 This slide visually compares the connection startup time of standard HTTPS/TCP versus QUIC.
 
@@ -524,7 +523,9 @@ QUIC Handshake (Right Side):QUIC combines transport setup and cryptographic key 
 
 Total Penalty: Only $1\text{ RTT}$ to establish reliability, congestion state, and TLS 1.3 encryption, allowing application data to travel right alongside the first flight.
 
-Slide 3: Streams, Parallelism, and Head-of-Line Blocking (HTTP/2 Limitation)
+Slide 38:
+
+ Streams, Parallelism, and Head-of-Line Blocking (HTTP/2 Limitation)
 
 This slide provides the architectural breakdown showing why HTTP/2 suffers from transport-level stalls.
 

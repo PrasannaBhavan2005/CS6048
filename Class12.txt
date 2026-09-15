@@ -1,0 +1,31 @@
+QUIC is not Quick Enough over Fast Internet (Zhang et al., 2023)
+
+1. Core Problem: The Fast Network Inversion
+* The High-Speed Bottleneck: While IETF QUIC (HTTP/3 over UDP) provides documented latency benefits over slow or lossy networks, it suffers substantial throughput degradation over high-speed links (>500 Mbps, WiFi 6/7, 5G)[cite: 8].
+* Throughput Deficit: The UDP+QUIC+HTTP/3 stack experiences a data rate reduction of up to 45.2% compared to TCP+TLS+HTTP/2 when downloading over a 1 Gbps link[cite: 8].
+* Expanding Performance Gap: Below ~500-600 Mbps, QUIC matches HTTP/2 performance[cite: 8]. As network bandwidth increases beyond 600 Mbps up to 1+ Gbps, the performance gap widens drastically due to client-side compute limits[cite: 8].
+
+2. Impact Across Real Browsers and Applications
+* Commercial Browsers: The performance collapse is pervasive across all major desktop browsers (Chrome, Firefox, Microsoft Edge, Opera)[cite: 8]. On Chrome, 1 Gbps download throughput drops from >900 Mbps on HTTP/2 down to 478 Mbps on QUIC[cite: 8].
+* Mobile Devices (5G): On Pixel 5 smartphones over mmWave/low-band 5G, 1 GB file downloads over QUIC take more than double the time (+110% to +112% longer) compared to HTTP/2[cite: 8].
+* Video Streaming (DASH ABR): Delivering 4K video over high-speed Ethernet and 5G results in an average video bitrate reduction of up to 9.8% on QUIC because high client CPU load starves the ABR algorithm[cite: 8].
+* Web Page Loading (PLT): Across Alexa's top 100 websites, QUIC incurs an average 3.0% longer Page Load Time (PLT), with a long tail where PLT increases by >50% (up to 74.9%) on complex pages[cite: 8].
+
+3. Root Cause Analysis: Receiver-Side Processing Bottleneck
+Prior industry efforts focused almost exclusively on optimizing server-side UDP transmission (GSO, sendmmsg)[cite: 8]. This paper proves that the receiver (client) is the actual bottleneck over fast networks due to two main issues[cite: 8]:
+
+Issue 1: Lack of Receiver-Side Hardware Offloading (GRO)
+* Excessive Kernel Packets: When receiving a 1 GB file, the Linux UDP stack processes 744,000 individual packets (netif_receive_skb calls) compared to only 58,000 packets for TCP[cite: 8].
+* TCP vs. UDP Offload Disparity: TCP utilizes Generic Receive Offload (GRO) in the NIC/driver to aggregate incoming packets into large 64 KB mega-buffers before hitting the transport layer[cite: 8]. QUIC lacks UDP GRO adoption because variable-sized encrypted multiplexed frames break standard packet aggregation rules[cite: 8].
+* System Call Overhead: The sheer volume of packets triggers intensive user-kernel boundary crossings (17,000 do_syscall_64 calls for QUIC vs. 4,000 for TCP)[cite: 8].
+
+Issue 2: User-Space ACK Generation and Frame Processing
+* Heavy User-Space Pipeline: Inside the Chromium networking stack (Chrome_ChildIOT thread), reading and processing incoming packets takes 8.7 seconds for QUIC vs. 4.1 seconds for HTTP/2[cite: 8].
+* Cost of User-Space ACKs: QUIC spends 3.0 seconds (out of 8.7 seconds) purely generating user-space ACK frames[cite: 8]. In contrast, TCP generates ACKs directly in the kernel with zero user-space processing cost and uses Delayed ACK to reduce packet count[cite: 8].
+* Processing Latency Inflation: Local packet processing delays inflate the apparent Round-Trip Time (RTT) from 1.9 ms (HTTP/2) to 16.2 ms (QUIC), which throttles sender-side congestion window growth[cite: 8].
+
+4. Key Recommendations for Mitigation
+* Receiver-Side UDP GRO: Implement and deploy UDP Generic Receive Offload at client network interfaces to merge UDP datagrams before passing them to the OS[cite: 8].
+* QUIC-Aware GSO/GRO: Adapt offloading mechanisms to handle variable-length frames and coordinate burst sizes with QUIC congestion control pacing[cite: 8].
+* Optimized Receiver ACK Logic: Standardize and implement QUIC Delayed ACKs (IETF ACK Frequency extension) and switch from single-packet recvmsg to batch recvmmsg system calls[cite: 8].
+* Multi-Threaded Receiving: Move beyond Chromium's single-threaded network worker to multi-threaded/multi-core packet reception with coupled congestion control to distribute the CPU burden[cite: 8].

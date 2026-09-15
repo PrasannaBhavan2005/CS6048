@@ -1,0 +1,40 @@
+Taking a Long Look at QUIC: An Approach for Rigorous Evaluation of Rapidly Evolving Transport Protocols (IMC '17)
+
+1. Core Motivation & The "Moving Target" Challenge
+* Rapid Evolution & Lack of Formal Specs: QUIC was deployed at massive scale (~7% of Internet traffic, >85% of Chrome-to-Google traffic) with frequent codebase overhauls and no formal state machine specification[cite: 7].
+* Prior Evaluation Pitfalls: Previous academic studies evaluated obsolete QUIC versions (v20-v23) using uncalibrated default server configurations with conservative Maximum Allowed Congestion Windows (MACW)[cite: 7]. This led to flawed conclusions that QUIC underperformed on high-bandwidth links[cite: 7].
+* Goal: Create an automated, instrumented gray-box framework to extract QUIC's state machine dynamically from execution traces and systematically benchmark it against tuned HTTP/2 + TLS + TCP across diverse network and device conditions[cite: 7].
+
+2. Critical Calibration & Methodological Insights
+* Uncalibrated vs. Production Performance: Out-of-the-box Chromium reference servers set MACW to 107 packets[cite: 7]. Increasing MACW to 430 (matching Google production servers) doubled large-file download speeds, resolving previous misleading findings[cite: 7].
+* Slow Start Bug Discovery: Identified and confirmed a bug in Chromium v52 where the Slow Start Threshold (ssthresh) failed to update from receiver-advertised buffers, causing premature exits from Slow Start[cite: 7].
+* Emulation on Dedicated Middleboxes: Network emulation (tc / netem) was run strictly on an intermediary OpenWRT router; applying netem locally at endpoints caused artificial packet bursts and immediate local loss notifications that bypassed network dynamics[cite: 7].
+
+3. Inferred State Machine & Protocol Behaviors
+* Runtime State Machine Extraction: Using execution logs and the Synoptic model generator, the authors produced the first empirical state diagrams for QUIC under both Cubic and BBR congestion control[cite: 7].
+* State Breakdown:
+  - Standard states: Init, SlowStart, CongestionAvoidance, ApplicationLimited[cite: 7].
+  - Non-standard / Advanced states: CongestionAvoidanceMaxed, Tail Loss Probe (TLP), and Proportional Rate Reduction (PRR) Recovery[cite: 7].
+
+4. Key Empirical Findings & Performance Vulnerabilities
+
+A. Desktop Performance
+* General Advantage: QUIC consistently outperformed TCP + TLS across desktop environments due to 0-RTT connection setups and absence of Head-of-Line (HoL) blocking[cite: 7].
+* Flaw with Many Small Objects: For pages with large numbers of small objects (e.g., 200 x 5 KB), QUIC underperformed TCP[cite: 7]. Hybrid Slow Start miscalculated RTT increases caused by rapid multiplexing as congestion, triggering an early exit from Slow Start before achieving high window capacity[cite: 7].
+* Variable Bandwidth: QUIC adapted significantly faster than TCP under fluctuating bandwidth (50-150 Mbps), achieving 79 Mbps average throughput vs. 46 Mbps for TCP due to unambiguous, accurate ACK timings[cite: 7].
+
+B. Packet Reordering Vulnerability (Deep Reordering)
+* Fixed NACK Threshold Weakness: Under network jitter causing out-of-order packet arrivals, QUIC suffered massive performance drops[cite: 7]. QUIC relied on a static threshold of 3 missing packets before triggering fast retransmit, causing frequent false-positive loss detections and thrashing the connection into Recovery[cite: 7].
+* Contrast with TCP: TCP uses DSACK to dynamically adapt reordering thresholds; increasing QUIC's NACK threshold mitigated this performance penalty[cite: 7].
+
+C. Severe Unfairness to TCP
+* Bandwidth Starvation: When competing against TCP flows over a shared bottleneck link (even with QUIC configured to emulate N=1 TCP connection), QUIC consumed more than twice its fair share of bandwidth (>50% against 2-4 competing TCP flows)[cite: 7].
+* Aggressive Growth: While both protocols used Cubic, QUIC's window growth slope was substantially steeper and updated more frequently than kernel TCP[cite: 7].
+
+D. Diminished Gains on Mobile Devices
+* User-Space CPU Bottleneck: On smartphones (Nexus 6, MotoG), QUIC's performance gains over TCP largely vanished[cite: 7].
+* Application-Limited Bottleneck: State machine analysis revealed mobile QUIC clients spent ~58% of execution time in the ApplicationLimited state (vs. only 7% on desktop) because constrained mobile CPUs and user-space context switching could not drain UDP socket buffers quickly enough[cite: 7].
+
+E. Video Streaming QoE & Proxy Dynamics
+* YouTube QoE: QUIC provided negligible QoE improvement over TCP for low-to-medium resolutions (tiny, medium, 720p)[cite: 7]. Notable gains appeared only at 4K (hd2160), where QUIC reduced rebuffering frequency by ~30% per playing second[cite: 7].
+* In-Network Proxies: Transparent TCP PEP proxies narrowed the performance gap with QUIC in high-loss scenarios[cite: 7]. Because QUIC encrypts transport headers, transparent middlebox optimizations are blocked unless explicit, terminating QUIC proxies are deployed[cite: 7].

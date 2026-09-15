@@ -1,0 +1,88 @@
+Problem statement-
+Throughput volatility: Real world networks experience extreme bandwidth fluctuations over 10% of sessions experience at leaast 34x variance 
+
+Traditional ABR algorithms predict future bandwidth from past chunk download speeds and adjust with buffer levels 
+R(t)=F(B(t)C(t)). When throughput is volatile, this estimation breaks down. Overestimating bandwidth causes unnecessary rebuffers, underestimating bandwidth leads to poor video quality and harmful TCP-ON-OFF 
+
+The authors found that 20-30% of all rebuffering events are completely unnecessary because network capacity was sufficient to sustain the minm video rate 
+C(t)>Rmin throughout the entire session 
+
+Rather than attempting to estimate the capacity and adjusting with the buffer, invert the desgin: choose video quality rate purely based on buffer occupancy, and only introduce capacity estimation where strictly necessary.
+
+2) Buffer Dynamics
+
+The buffer system: The buffer drains at a constant rate of 1 sec/sec of video playback. When downloading chink k of length V seconds at rate R[k] over capacity c[K], the net  buffer change is 
+
+delta b = v-v.r[k]/c[k] =v(1-r[k]/c[k]);
+
+Theoretical guarantee: Under contns, CBR and infinite length assumptions, any mapping function f(B) that is strictly increasing and maps [0,Bmax]-> [Rmin, Rmax] guarantees:
+
+Zero unnecessay Rebuffering because f(B)->Rmin as B->0 as long as C(t)>=Rmin, the buffer is mathematically guaranteed to recover before emptying 
+
+Average Rate Maximisation: The average streamed bitrate matches the average link capacity for Rmin<C(t)<Rmax
+
+3) Practical constraints:
+Because chunks are discrete(V seconds) and cannot be aborted mid flight in browser players, a buffer rate mapping plane is divided into three distinct zones 
+
+Reservoir(r):(0<=B<=r) The bottom safety cushion(0<=B<=r) when buffer drops here, the algo locks strictly to Rmin to build the buffer back up 
+
+Cushion:(r<B<r+cu) The active adaptation zone where the rate maps monotonically from Rmin to Rmax
+
+Upper reservoir- The zonne above r+cu up to Bmax where rat remains locked at Rmax 
+
+Discrete Rate Adaptation: The mapping function is continuous butt video renditions are discrete. The player stays at its current rate until f(B) crosses the threshold of the next higher rate or lower rate sidcrete rate.
+
+
+
+
+
+4. Evolution of the Algorithm Iterations
+
+1. BBA-0
+
+Uses a fixed 90 s reservoir and 126 s cushion with a piecewise-linear rate map.
+Reduced rebuffers by 10–20% compared with the Control algorithm.
+Reduced rate switches by 50–60%.
+Main drawback: lower average video bitrate, around 100–175 kb/s below Control.
+This was mainly due to slow startup and the fact that it ignored Variable Bitrate (VBR) chunk sizes.
+
+2. BBA-1
+
+Introduced a dynamic reservoir calculated over a 480 s window based on VBR chunk sizes.
+Instead of mapping buffer occupancy to nominal bitrate, it maps the buffer directly to the sizes of upcoming chunks.
+Achieved a rebuffer rate close to the theoretical lower bound.
+During peak hours, rebuffers were reduced by approximately 20–28% compared with Control.
+Improved average bitrate compared with BBA-0.
+Main drawback: VBR chunk-size fluctuations caused frequent bitrate switching.
+It also retained the slow-startup problem of BBA-0.
+
+3. BBA-2
+
+Introduced a two-phase architecture:
+Startup phase: Uses simple capacity estimation based on the throughput of the immediately preceding chunk.
+Steady-state phase: Switches to the pure buffer-based chunk map.
+During startup, capacity estimation allows the player to ramp up the bitrate more aggressively and build its buffer faster.
+Once the buffer is sufficiently high—or begins decreasing—the algorithm switches to buffer-based adaptation.
+Achieved a steady-state video rate higher than the Control algorithm.
+Overall, its video rate was approximately comparable to Control while still providing a 10–20% reduction in rebuffers.
+Main drawback: slightly higher rebuffering than BBA-1 because the aggressive startup phase introduces some additional risk.
+
+4. BBA-Others
+
+Added mechanisms for switch smoothing and outage protection.
+Before switching to a higher bitrate, the algorithm looks ahead by up to the number of chunks currently available in the buffer.
+This reduces unnecessary bitrate oscillations caused by individual VBR chunks.
+The reservoir is also designed to only expand (right-shift) and never shrink, providing additional protection against network outages.
+Reduced bitrate-switching frequency to approximately the level of the Control algorithm.
+Achieved around 20–30% fewer rebuffers while maintaining approximately the same video bitrate as Control.
+The main tradeoff was a small reduction in video bitrate of around 20 kb/s during off-peak periods.
+
+
+
+Empirical DDeployment- 
+
+Scale- devalueated across multiplle A/B tests with over 500000 viewinng hours per group 
+
+Rebbuffer Data Sttrcture: BBA reduced rebuffers by 10-20% comparred to Netflix's production 1 
+
+Visual QQuality- In steady state, BBA delivered a higher video bitrate than the Control algo, disproving the assumption that reducing stalls reqiires sacrificing visual qualoty 
